@@ -1398,9 +1398,16 @@ namespace Solid.Arduino
             var customSysEx = new CustomSysEx
             {
                 Command = _messageBuffer[1],
-                Content = new int[_messageBufferIndex-2]
+                Content = new byte[(_messageBufferIndex - 2) / 2]
             };
-            Array.Copy(_messageBuffer, 2, customSysEx.Content, 0, _messageBufferIndex - 2);
+
+            var data = new byte[(_messageBufferIndex - 2) / 2];
+
+            for (var x = 0; x < customSysEx.Content.Length; x++)
+            {
+              customSysEx.Content[x] = (byte)(_messageBuffer[x * 2 + 2] | _messageBuffer[x * 2 + 3] << 7);
+            }
+            
             return new FirmataMessage(customSysEx, MessageType.CustomSysEx);
         }
 

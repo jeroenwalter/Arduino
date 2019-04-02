@@ -13,6 +13,6 @@
     /// <summary>
     /// The content of the SysEx message
     /// </summary>
-    public int[] Content { get; internal set; }
+    public byte[] Content { get; internal set; }
   }
 }
