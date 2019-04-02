@@ -70,6 +70,7 @@ namespace Solid.Arduino.Firmata
         AnalogMappingResponse,
         PinStateResponse,
         StringData,
-        I2CReply
+        I2CReply,
+        CustomSysEx
     }
 }

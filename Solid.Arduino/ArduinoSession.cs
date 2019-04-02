@@ -14,49 +14,49 @@ using Solid.Arduino.I2C;
 
 namespace Solid.Arduino
 {
-    /// <summary>
-    /// Represents an active layer for serial communication with an Arduino board.
-    /// </summary>
-    /// <remarks>
-    /// This class supports a few common protocols used for communicating with Arduino boards.
-    /// The protocols can be used simultaneous and independently of each other.
-    /// </remarks>
-    /// <seealso href="http://arduino.cc">Official Arduino website</seealso>
-    /// <seealso href="https://github.com/SolidSoils/Arduino">SolidSoils4Arduino project on GitHub</seealso>
-    /// <example>
-    /// <code language="C#">
-    /// var connection = new SerialConnection("COM3", SerialBaudRate.Bps_57600);
-    /// var session = new ArduinoSession(connection, timeOut: 250);
-    /// // Cast to interface done, just for the sake of this demo.
-    /// IFirmataProtocol firmata = (IFirmataProtocol)session;
-    ///
-    /// Firmware firm = firmata.GetFirmware();
-    /// Console.WriteLine("Firmware: {0} {1}.{2}", firm.Name, firm.MajorVersion, firm.MinorVersion);
-    ///
-    /// ProtocolVersion version = firmata.GetProtocolVersion();
-    /// Console.WriteLine("Protocol version: {0}.{1}", version.Major, version.Minor);
-    ///
-    /// BoardCapability caps = firmata.GetBoardCapability();
-    /// Console.WriteLine("Board Capabilities:");
-    ///
-    /// foreach (var pincap in caps.PinCapabilities)
-    /// {
-    ///    Console.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}",
-    ///        pincap.PinNumber,
-    ///        pincap.DigitalInput,
-    ///        pincap.DigitalOutput,
-    ///        pincap.Analog,
-    ///        pincap.AnalogResolution,
-    ///        pincap.Pwm,
-    ///        pincap.PwmResolution,
-    ///        pincap.Servo,
-    ///        pincap.ServoResolution);
-    /// }
-    /// Console.WriteLine();
-    /// Console.ReadLine();
-    /// </code>
-    /// </example>
-    public class ArduinoSession : IFirmataProtocol, IServoProtocol, II2CProtocol, IStringProtocol, IDisposable
+  /// <summary>
+  /// Represents an active layer for serial communication with an Arduino board.
+  /// </summary>
+  /// <remarks>
+  /// This class supports a few common protocols used for communicating with Arduino boards.
+  /// The protocols can be used simultaneous and independently of each other.
+  /// </remarks>
+  /// <seealso href="http://arduino.cc">Official Arduino website</seealso>
+  /// <seealso href="https://github.com/SolidSoils/Arduino">SolidSoils4Arduino project on GitHub</seealso>
+  /// <example>
+  /// <code language="C#">
+  /// var connection = new SerialConnection("COM3", SerialBaudRate.Bps_57600);
+  /// var session = new ArduinoSession(connection, timeOut: 250);
+  /// // Cast to interface done, just for the sake of this demo.
+  /// IFirmataProtocol firmata = (IFirmataProtocol)session;
+  ///
+  /// Firmware firm = firmata.GetFirmware();
+  /// Console.WriteLine("Firmware: {0} {1}.{2}", firm.Name, firm.MajorVersion, firm.MinorVersion);
+  ///
+  /// ProtocolVersion version = firmata.GetProtocolVersion();
+  /// Console.WriteLine("Protocol version: {0}.{1}", version.Major, version.Minor);
+  ///
+  /// BoardCapability caps = firmata.GetBoardCapability();
+  /// Console.WriteLine("Board Capabilities:");
+  ///
+  /// foreach (var pincap in caps.PinCapabilities)
+  /// {
+  ///    Console.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}",
+  ///        pincap.PinNumber,
+  ///        pincap.DigitalInput,
+  ///        pincap.DigitalOutput,
+  ///        pincap.Analog,
+  ///        pincap.AnalogResolution,
+  ///        pincap.Pwm,
+  ///        pincap.PwmResolution,
+  ///        pincap.Servo,
+  ///        pincap.ServoResolution);
+  /// }
+  /// Console.WriteLine();
+  /// Console.ReadLine();
+  /// </code>
+  /// </example>
+  public class ArduinoSession : IFirmataProtocol, IServoProtocol, II2CProtocol, IStringProtocol, IDisposable
     {
         #region Type declarations
 
@@ -912,8 +912,19 @@ namespace Solid.Arduino
         {
             while (_connection.IsOpen && _connection.BytesToRead > 0)
             {
-                int serialByte = _connection.ReadByte();
+                int serialByte = 0;
 
+                try
+                {
+                  serialByte = _connection.ReadByte();
+                }
+                catch (Exception exception)
+                {
+                  // Connection is closed while entering this loop.
+                  // This happens when disposing of the ArduinoSession while still receiving data.
+                  return;
+                }
+                
 #if DEBUG
                 if (_messageBufferIndex > 0 && _messageBufferIndex % 8 == 0)
                     Debug.WriteLine(string.Empty);
@@ -1049,7 +1060,11 @@ namespace Solid.Arduino
                         //case MessageHeader.SystemReset:
                         default:
                             // 0xF? command not supported.
-                            throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
+                            //throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
+                            
+                            // Stream is most likely out of sync.
+                            // Just skip these bytes, until sync is found when a new message starts.
+                            return;
                     }
                     break;
 
@@ -1157,7 +1172,8 @@ namespace Solid.Arduino
                     return;
 
                 default: // Unknown or unsupported message
-                    throw new NotImplementedException();
+                    DeliverMessage(CreateCustomSysExMessage());
+                    return;
             }
         }
 
@@ -1371,8 +1387,20 @@ namespace Solid.Arduino
             firmware.Name = builder.ToString();
             return new FirmataMessage(firmware, MessageType.FirmwareResponse);
         }
+    
+
+        private FirmataMessage CreateCustomSysExMessage()
+        {
+            var customSysEx = new CustomSysEx
+            {
+                Command = _messageBuffer[1],
+                Content = new int[_messageBufferIndex-2]
+            };
+            Array.Copy(_messageBuffer, 2, customSysEx.Content, 0, _messageBufferIndex - 2);
+            return new FirmataMessage(customSysEx, MessageType.CustomSysEx);
+        }
 
         #endregion
 
-    }
+  }
 }
