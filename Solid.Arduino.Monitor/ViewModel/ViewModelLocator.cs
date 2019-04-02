@@ -28,7 +28,7 @@ namespace Solid.Arduino.Monitor.ViewModel
         /// </summary>
         public ViewModelLocator()
         {
-            ServiceLocator.SetLocatorProvider(() => (IServiceLocator)SimpleIoc.Default);
+            //ServiceLocator.SetLocatorProvider(() => (IServiceLocator)SimpleIoc.Default);
 
             ////if (ViewModelBase.IsInDesignModeStatic)
             ////{
