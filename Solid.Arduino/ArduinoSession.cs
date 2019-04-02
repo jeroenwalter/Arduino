@@ -935,8 +935,12 @@ namespace Solid.Arduino
                 if (_processMessage != null)
                 {
                     _processMessage(serialByte);
-                }
-                else
+#if DEBUG
+                  if (_processMessage == null)
+                    Debug.WriteLine(string.Empty);
+#endif
+        }
+        else
                 {
                     if ((serialByte & 0x80) != 0)
                     {
