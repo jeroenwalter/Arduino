@@ -924,21 +924,24 @@ namespace Solid.Arduino
                   // This happens when disposing of the ArduinoSession while still receiving data.
                   return;
                 }
-                
+         
+/*
 #if DEBUG
                 if (_messageBufferIndex > 0 && _messageBufferIndex % 8 == 0)
                     Debug.WriteLine(string.Empty);
 
                 Debug.Write(string.Format("{0:x2} ", serialByte));
 #endif
-
+*/
                 if (_processMessage != null)
                 {
                     _processMessage(serialByte);
+/*
 #if DEBUG
                   if (_processMessage == null)
                     Debug.WriteLine(string.Empty);
 #endif
+*/
         }
         else
                 {
