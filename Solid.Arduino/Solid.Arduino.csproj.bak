@@ -45,11 +45,6 @@
     <Compile Include="EnhancedSerialPort.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Messages.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Messages.resx</DependentUpon>
-    </Compile>
     <Compile Include="SerialBaudRate.cs" />
     <Compile Include="EnhancedSerialConnection.cs">
       <SubType>Component</SubType>
@@ -59,12 +54,6 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="SerialPortFixer.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Messages.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Messages.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="Solid.Arduino.nuspec" />

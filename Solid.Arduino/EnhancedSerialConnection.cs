@@ -1,6 +1,10 @@
 ﻿using System;
 using System.IO.Ports;
 using System.Linq;
+using Solid.Arduino.Firmata;
+using SerialData = Solid.Arduino.Firmata.SerialData;
+using SerialDataReceivedEventArgs = Solid.Arduino.Firmata.SerialDataReceivedEventArgs;
+using SerialDataReceivedEventHandler = Solid.Arduino.Firmata.SerialDataReceivedEventHandler;
 
 namespace Solid.Arduino
 {
@@ -17,10 +21,13 @@ namespace Solid.Arduino
         /// Initializes a new instance of <see cref="EnhancedSerialConnection"/> class using the highest serial port available at 115,200 bits per second.
         /// </summary>
         public EnhancedSerialConnection()
-            : base(GetLastPortName(), (int)SerialBaudRate.Bps_115200)
+            : this(GetLastPortName(), SerialBaudRate.Bps_115200)
         {
-            ReadTimeout = 100;
-            WriteTimeout = 100;
+        }
+
+        private void OnDataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+        {
+          DataReceived?.Invoke(sender, new SerialDataReceivedEventArgs((SerialData)e.EventType));
         }
 
         /// <summary>
@@ -33,7 +40,8 @@ namespace Solid.Arduino
         {
             ReadTimeout = 100;
             WriteTimeout = 100;
-        }
+            base.DataReceived += OnDataReceived;
+    }
 
         #endregion
 
@@ -54,6 +62,9 @@ namespace Solid.Arduino
         {
             return SerialConnection.Find(query, expectedReply);
         }
+
+        public new int InfiniteTimeout => SerialPort.InfiniteTimeout;
+        public new event SerialDataReceivedEventHandler DataReceived;
 
         /// <inheritdoc cref="SerialPort.Close"/>
         public new void Close()

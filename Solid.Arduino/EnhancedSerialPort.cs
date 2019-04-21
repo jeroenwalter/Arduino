@@ -24,6 +24,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Threading;
+using SerialDataReceivedEventArgs = Solid.Arduino.Firmata.SerialDataReceivedEventArgs;
+using SerialDataReceivedEventHandler = Solid.Arduino.Firmata.SerialDataReceivedEventHandler;
 
 namespace Solid.Arduino
 {

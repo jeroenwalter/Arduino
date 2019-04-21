@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Solid.Arduino.Firmata;
-using Solid.Arduino.Firmata.Servo;
-using Solid.Arduino.I2C;
 
 namespace Solid.Arduino.Test
 {

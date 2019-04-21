@@ -6,6 +6,9 @@ using System.Linq;
 using System.Threading;
 
 using Solid.Arduino.Firmata;
+using SerialData = Solid.Arduino.Firmata.SerialData;
+using SerialDataReceivedEventArgs = Solid.Arduino.Firmata.SerialDataReceivedEventArgs;
+using SerialDataReceivedEventHandler = Solid.Arduino.Firmata.SerialDataReceivedEventHandler;
 
 namespace Solid.Arduino
 {
@@ -48,6 +51,13 @@ namespace Solid.Arduino
         {
             ReadTimeout = 100;
             WriteTimeout = 100;
+
+            base.DataReceived += OnDataReceived;
+        }
+
+        private void OnDataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+        {
+          DataReceived?.Invoke(sender, new SerialDataReceivedEventArgs((SerialData)e.EventType));
         }
 
         /// <summary>
@@ -70,6 +80,9 @@ namespace Solid.Arduino
 
         #region Public Methods & Properties
 
+        public new int InfiniteTimeout => SerialPort.InfiniteTimeout;
+        public new event SerialDataReceivedEventHandler DataReceived;
+        
         /// <inheritdoc cref="SerialPort" />
         public new void Open()
         {
@@ -109,6 +122,7 @@ namespace Solid.Arduino
                 return;
 
             _isDisposed = true;
+            base.DataReceived -= OnDataReceived;
             BaseStream.Dispose();
             GC.SuppressFinalize(BaseStream);
             base.Dispose();

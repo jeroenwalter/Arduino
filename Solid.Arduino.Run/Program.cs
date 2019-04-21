@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading;
+using System.Linq;
 
 using Solid.Arduino.Firmata;
-using Solid.Arduino.I2C;
-using System.Linq;
+using Solid.Arduino.Firmata.I2c;
 
 namespace Solid.Arduino.Run
 {

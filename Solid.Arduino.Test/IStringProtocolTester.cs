@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using Solid.Arduino;
-using System.Reflection;
 using System.Threading;
+using Solid.Arduino.Firmata;
 
 namespace Solid.Arduino.Test
 {

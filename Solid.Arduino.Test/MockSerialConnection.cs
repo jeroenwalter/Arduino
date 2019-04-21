@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Ports;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Solid.Arduino.Firmata;
 
 namespace Solid.Arduino.Test
 {
@@ -37,6 +35,7 @@ namespace Solid.Arduino.Test
             set {}
         }
 
+        public int InfiniteTimeout => -1;
         public event SerialDataReceivedEventHandler DataReceived;
 
         public bool IsOpen
@@ -248,15 +247,12 @@ namespace Solid.Arduino.Test
                 || response.Length == 0)
                 return;
 
-            ConstructorInfo _serialDataReceivedEventArgsConstructor = typeof(SerialDataReceivedEventArgs)
-                .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(SerialData) }, null);
-
-            var charReceivedEventArgs = (SerialDataReceivedEventArgs)_serialDataReceivedEventArgsConstructor.Invoke(new object[] { SerialData.Chars });
+            var charReceivedEventArgs = new SerialDataReceivedEventArgs(SerialData.Chars);
 
             for (int x = 0; x < response.Length; x++)
             {
                 if (response[x] == 26)
-                    DataReceived(this, (SerialDataReceivedEventArgs)_serialDataReceivedEventArgsConstructor.Invoke(new object[] { SerialData.Eof }));
+                    DataReceived(this, new SerialDataReceivedEventArgs(SerialData.Eof));
                 else
                     DataReceived(this, charReceivedEventArgs);
             }

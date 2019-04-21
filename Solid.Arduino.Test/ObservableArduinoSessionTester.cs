@@ -2,7 +2,7 @@
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using Solid.Arduino;
+using Solid.Arduino.Firmata;
 
 namespace Solid.Arduino.Test
 {
