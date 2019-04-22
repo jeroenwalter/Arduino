@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices.ComTypes;
+using System.Transactions;
 
 namespace Solid.Arduino.Firmata
 {
@@ -29,6 +32,12 @@ namespace Solid.Arduino.Firmata
   /// <param name="e">A <see cref="T:System.IO.Ports.SerialDataReceivedEventArgs" /> object that contains the event data. </param>
   public delegate void SerialDataReceivedEventHandler(object sender, SerialDataReceivedEventArgs e);
 
+  public interface ISerialConnectionFactory
+  {
+    IEnumerable<string> GetPortNames();
+    ISerialConnection Open(string portName, int baudRate);
+
+  }
 
   /// <summary>
   /// Defines a serial port connection.

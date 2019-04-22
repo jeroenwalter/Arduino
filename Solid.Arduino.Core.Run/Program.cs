@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Linq;
-
+using Solid.Arduino.Core;
 using Solid.Arduino.Firmata;
 using Solid.Arduino.Firmata.I2c;
 
@@ -24,7 +24,7 @@ namespace Solid.Arduino.Run
         private static ISerialConnection GetConnection()
         {
             Console.WriteLine("Searching Arduino connection...");
-            ISerialConnection connection = EnhancedSerialConnection.Find();
+            ISerialConnection connection = SerialConnection.Find();
 
             if (connection == null)
                 Console.WriteLine("No connection found. Make sure your Arduino board is attached to a USB port.");
@@ -53,7 +53,7 @@ namespace Solid.Arduino.Run
 
         private static void DisplayPortCapabilities()
         {
-            using (var session = new ArduinoSession(new EnhancedSerialConnection("COM3", SerialBaudRate.Bps_57600)))
+            using (var session = new ArduinoSession(new SerialConnection("COM3", SerialBaudRate.Bps_57600)))
             {
                 BoardCapability cap = session.GetBoardCapability();
                 Console.WriteLine();

@@ -941,7 +941,7 @@ namespace Solid.Arduino.Firmata
 #endif
 */
         }
-        else
+                else
                 {
                     if ((serialByte & 0x80) != 0)
                     {
@@ -1067,15 +1067,23 @@ namespace Solid.Arduino.Firmata
                             // 0xF? command not supported.
                             //throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
                             
-                            // Stream is most likely out of sync.
+                            // Stream is most likely out of sync or the baudrate is incorrect.
+                            // Don't throw an exception here, as we're in the middle of handling an event and
+                            // have no way of catching an exception, other than a global unhandled exception handler.
                             // Just skip these bytes, until sync is found when a new message starts.
                             return;
                     }
                     break;
 
                 default:
-                    // Command not supported.
-                    throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
+                  // Command not supported.
+                  //throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
+
+                  // Stream is most likely out of sync or the baudrate is incorrect.
+                  // Don't throw an exception here, as we're in the middle of handling an event from the serial port and
+                  // have no way of catching an exception, other than a global unhandled exception handler.
+                  // Just skip these bytes, until sync is found when a new message starts.
+                  return;
             }
         }
 

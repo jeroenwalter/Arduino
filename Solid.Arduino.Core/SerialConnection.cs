@@ -4,13 +4,12 @@ using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
-
 using Solid.Arduino.Firmata;
 using SerialData = Solid.Arduino.Firmata.SerialData;
 using SerialDataReceivedEventArgs = Solid.Arduino.Firmata.SerialDataReceivedEventArgs;
 using SerialDataReceivedEventHandler = Solid.Arduino.Firmata.SerialDataReceivedEventHandler;
 
-namespace Solid.Arduino
+namespace Solid.Arduino.Core
 {
     /// <summary>
     /// Represents a serial port connection.
@@ -20,6 +19,7 @@ namespace Solid.Arduino
     {
         #region Fields
 
+        private const int DefaultTimeoutMs = 100;
         private static readonly SerialBaudRate[] PopularBaudRates =
         {
             SerialBaudRate.Bps_9600,
@@ -47,12 +47,8 @@ namespace Solid.Arduino
         /// Initializes a new instance of <see cref="SerialConnection"/> class using the highest COM-port available at 115,200 bits per second.
         /// </summary>
         public SerialConnection()
-            : base(GetHighestComPortName(), (int) SerialBaudRate.Bps_115200)
+            : this(GetHighestComPortName(), SerialBaudRate.Bps_115200)
         {
-            ReadTimeout = 100;
-            WriteTimeout = 100;
-
-            base.DataReceived += OnDataReceived;
         }
 
         private void OnDataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
@@ -68,8 +64,10 @@ namespace Solid.Arduino
         public SerialConnection(string portName, SerialBaudRate baudRate)
             : base(portName, (int) baudRate)
         {
-            ReadTimeout = 100;
-            WriteTimeout = 100;
+            ReadTimeout = DefaultTimeoutMs;
+            WriteTimeout = DefaultTimeoutMs;
+
+            base.DataReceived += OnDataReceived;
         }
 
         #endregion
@@ -123,8 +121,7 @@ namespace Solid.Arduino
 
             _isDisposed = true;
             base.DataReceived -= OnDataReceived;
-            BaseStream.Dispose();
-            GC.SuppressFinalize(BaseStream);
+            
             base.Dispose();
             GC.SuppressFinalize(this);
         }
@@ -159,8 +156,8 @@ namespace Solid.Arduino
                 };
 
             string[] portNames = GetPortNames();
-            ISerialConnection connection = FindConnection(isAvailableFunc, portNames, PopularBaudRates);
-            return connection ?? FindConnection(isAvailableFunc, portNames, OtherBaudRates);
+            ISerialConnection connection = FindConnection(isAvailableFunc, portNames, PopularBaudRates, DefaultTimeoutMs);
+            return connection ?? FindConnection(isAvailableFunc, portNames, OtherBaudRates, DefaultTimeoutMs);
         }
 
         public static ISerialConnection FindFirmata(string portName, SerialBaudRate baudRate, int timeOut)
@@ -173,7 +170,7 @@ namespace Solid.Arduino
 
           string[] portNames = { portName };
           SerialBaudRate[] baudRates = { baudRate };
-          return FindConnection(isAvailableFunc, portNames, baudRates);
+          return FindConnection(isAvailableFunc, portNames, baudRates, timeOut);
         }
 
     /// <summary>
@@ -226,20 +223,20 @@ namespace Solid.Arduino
     public static ISerialConnection Find(string query, string expectedReply)
         {
             if (string.IsNullOrEmpty(query))
-                throw new ArgumentException(Messages.ArgumentEx_NotNullOrEmpty, "query");
+                throw new ArgumentException(Messages.ArgumentEx_NotNullOrEmpty, nameof(query));
 
             if (string.IsNullOrEmpty(expectedReply))
-                throw new ArgumentException(Messages.ArgumentEx_NotNullOrEmpty, "expectedReply");
+                throw new ArgumentException(Messages.ArgumentEx_NotNullOrEmpty, nameof(expectedReply));
 
-            Func<ArduinoSession, bool> isAvailableFunc = session =>
-                {
-                    session.Write(query);
-                    return session.Read(expectedReply.Length) == expectedReply;
-                };
+            bool IsAvailableFunc(ArduinoSession session)
+            {
+              session.Write(query);
+              return session.Read(expectedReply.Length) == expectedReply;
+            }
 
-            string[] portNames = GetPortNames();
-            ISerialConnection connection = FindConnection(isAvailableFunc, portNames, PopularBaudRates);
-            return connection ?? FindConnection(isAvailableFunc, portNames, OtherBaudRates);
+            var portNames = GetPortNames();
+            var connection = FindConnection(IsAvailableFunc, portNames, PopularBaudRates, DefaultTimeoutMs);
+            return connection ?? FindConnection(IsAvailableFunc, portNames, OtherBaudRates, DefaultTimeoutMs);
         }
 
         #endregion
@@ -251,7 +248,7 @@ namespace Solid.Arduino
             return GetPortNames().Where(n => n.StartsWith("COM")).OrderByDescending(n => n).FirstOrDefault();
         }
 
-        private static ISerialConnection FindConnection(Func<ArduinoSession, bool> isDeviceAvailable, string[] portNames, SerialBaudRate[] baudRates)
+        private static ISerialConnection FindConnection(Func<ArduinoSession, bool> isDeviceAvailable, string[] portNames, SerialBaudRate[] baudRates, int timeOut)
         {
             bool found = false;
 
@@ -259,36 +256,41 @@ namespace Solid.Arduino
             {
                 foreach (SerialBaudRate rate in baudRates)
                 {
-                    try
+                  try
+                  {
+                    using (var connection = new SerialConnection(portNames[x], rate))
                     {
-                        using (var connection = new EnhancedSerialConnection(portNames[x], rate))
-                        {
-                            using (var session = new ArduinoSession(connection, 100))
-                            {
-                                Debug.WriteLine("{0}:{1}; ", portNames[x], (int)rate);
+                      using (var session = new ArduinoSession(connection, timeOut))
+                      {
+                        Debug.WriteLine("{0}:{1}; ", portNames[x], (int) rate);
 
-                                if (isDeviceAvailable(session))
-                                    found = true;
-                            }
-                        }
+                        if (isDeviceAvailable(session))
+                          found = true;
+                      }
+                    }
 
-                        if (found)
-                            return new EnhancedSerialConnection(portNames[x], rate);
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        // Port is not available.
-                        Debug.WriteLine("{0} NOT AVAILABLE; ", portNames[x]);
-                        break;
-                    }
-                    catch (TimeoutException)
-                    {
-                        // Baudrate or protocol error.
-                    }
-                    catch (IOException ex)
-                    {
-                        Debug.WriteLine($"HResult 0x{ex.HResult:X} - {ex.Message}");
-                    }
+                    if (found)
+                      return new SerialConnection(portNames[x], rate);
+                  }
+                  catch (UnauthorizedAccessException)
+                  {
+                    // Port is not available.
+                    Debug.WriteLine("{0} NOT AVAILABLE; ", portNames[x]);
+                    break;
+                  }
+                  catch (TimeoutException)
+                  {
+                    // Baudrate or protocol error.
+                  }
+                  catch (IOException ex)
+                  {
+                    Debug.WriteLine($"HResult 0x{ex.HResult:X} - {ex.Message}");
+                  }
+                  catch (Exception ex)
+                  {
+                    // Not every baud rate is supported on some USB devices. I have a chinese Arduino that doesn't do 28k8...
+                    Debug.WriteLine($"Unexpected exception: {ex}");
+                  }
                 }
             }
             return null;

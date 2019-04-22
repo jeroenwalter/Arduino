@@ -5,6 +5,7 @@ using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Solid.Arduino;
+using Solid.Arduino.Core;
 
 namespace Solid.Arduino.IntegrationTest
 {
@@ -28,7 +29,6 @@ namespace Solid.Arduino.IntegrationTest
                 Assert.IsNotNull(arduinoConnection);
             }
         }
-
 
         /// <summary>
         /// Finds a live serial connection by issuing a Firmata SysEx Firmware query (0xF0 0x79 0xF7).

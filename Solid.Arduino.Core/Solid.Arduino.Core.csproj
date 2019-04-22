@@ -1,13 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <Version>1.0.2</Version>
-    <Product>Solid.Arduino</Product>
-    <Company>Solid Soils Solutions</Company>
-    <Copyright>Copyright © Solid Soils Solutions 2013 - 2017</Copyright>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="4.6.0-preview4.19212.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Solid.Arduino.Firmata\Solid.Arduino.Firmata.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Messages.Designer.cs">
