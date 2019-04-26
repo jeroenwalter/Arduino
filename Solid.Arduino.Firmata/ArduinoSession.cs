@@ -119,7 +119,6 @@ namespace Solid.Arduino.Firmata
         private const int Buffersize = 2048;
         private const int MaxQueuelength = 100;
 
-        private readonly ISerialConnection _connection;
         private readonly bool _gotOpenConnection;
         private readonly LinkedList<FirmataMessage> _receivedMessageList = new LinkedList<FirmataMessage>();
         private readonly Queue<string> _receivedStringQueue = new Queue<string>();
@@ -142,18 +141,18 @@ namespace Solid.Arduino.Firmata
         /// </summary>
         /// <param name="connection">The serial port connection</param>
         /// <exception cref="System.ArgumentNullException">connection</exception>
-        public ArduinoSession(ISerialConnection connection)
+        public ArduinoSession(IDataConnection connection)
         {
             if (connection == null)
                 throw new ArgumentNullException(nameof(connection));
 
-            _connection = connection;
+            Connection = connection;
             _gotOpenConnection = connection.IsOpen;
 
             if (!connection.IsOpen)
                 connection.Open();
 
-            _connection.DataReceived += SerialDataReceived;
+            Connection.DataReceived += SerialDataReceived;
         }
 
         /// <summary>
@@ -163,7 +162,7 @@ namespace Solid.Arduino.Firmata
         /// <param name="timeOut">The response time out in milliseconds</param>
         /// <exception cref="System.ArgumentNullException">connection</exception>
         /// <exception cref="System.ArgumentOutOfRangeException">timeOut</exception>
-        public ArduinoSession(ISerialConnection connection, int timeOut)
+        public ArduinoSession(IDataConnection connection, int timeOut)
             : this(connection)
         {
             if (timeOut < connection.InfiniteTimeout)
@@ -176,6 +175,8 @@ namespace Solid.Arduino.Firmata
 
         #region Public Events, Methods & Properties
 
+        public IDataConnection Connection { get; }
+
         /// <summary>
         /// Gets or sets the number of milliseconds before a time-out occurs when a read operation does not finish.
         /// </summary>
@@ -187,7 +188,7 @@ namespace Solid.Arduino.Firmata
             get { return _messageTimeout; }
             set
             {
-                if (value < _connection.InfiniteTimeout)
+                if (value < Connection.InfiniteTimeout)
                     throw new ArgumentOutOfRangeException();
 
                 _messageTimeout = value;
@@ -201,12 +202,12 @@ namespace Solid.Arduino.Firmata
         {
             lock (_receivedMessageList)
             {
-                _connection.Close();
+                Connection.Close();
                 _receivedMessageList.Clear();
                 _processMessage = null;
                 _awaitedMessagesQueue = new ConcurrentQueue<FirmataMessage>();
                 _awaitedStringsQueue = new ConcurrentQueue<StringRequest>();
-                _connection.Open();
+                Connection.Open();
             }
         }
 
@@ -223,26 +224,26 @@ namespace Solid.Arduino.Firmata
 
         /// <inheritdoc cref="IStringProtocol.NewLine"/>
         /// <remarks>
-        /// The value of this property is mapped to the <see cref="ISerialConnection.NewLine"/> property of the
+        /// The value of this property is mapped to the <see cref="IDataConnection.NewLine"/> property of the
         /// connection the <see cref="ArduinoSession"/> instance is relying on.
         /// </remarks>
         public string NewLine
         {
-            get { return _connection.NewLine; }
-            set { _connection.NewLine = value; }
+            get { return Connection.NewLine; }
+            set { Connection.NewLine = value; }
         }
 
         /// <inheritdoc cref="IStringProtocol.Write"/>
         public void Write(string value)
         {
             if (!string.IsNullOrEmpty(value))
-                _connection.Write(value);
+                Connection.Write(value);
         }
 
         /// <inheritdoc cref="IStringProtocol.WriteLine"/>
         public void WriteLine(string value)
         {
-            _connection.WriteLine(value);
+            Connection.WriteLine(value);
         }
 
         /// <inheritdoc cref="IStringProtocol.ReadLine"/>
@@ -331,7 +332,7 @@ namespace Solid.Arduino.Firmata
         /// <inheritdoc cref="IFirmataProtocol.ResetBoard"/>
         public void ResetBoard()
         {
-            _connection.Write(new [] { (byte)0xFF }, 0, 1);
+            Connection.Write(new [] { (byte)0xFF }, 0, 1);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetDigitalPin(int,long)"/>
@@ -353,7 +354,7 @@ namespace Solid.Arduino.Firmata
                     (byte)(value & 0x7F),
                     (byte)((value >> 7) & 0x7F)
                 };
-                _connection.Write(message, 0, 3);
+                Connection.Write(message, 0, 3);
                 return;
             }
 
@@ -372,7 +373,7 @@ namespace Solid.Arduino.Firmata
             } while (value > 0 || index < 5);
 
             message[index] = SysExEnd;
-            _connection.Write(message, 0, index + 1);
+            Connection.Write(message, 0, index + 1);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetDigitalPin(int,bool)"/>
@@ -381,7 +382,7 @@ namespace Solid.Arduino.Firmata
             if (pinNumber < 0 || pinNumber > 127)
                 throw new ArgumentOutOfRangeException(nameof(pinNumber), Messages.ArgumentEx_PinRange0_127);
 
-            _connection.Write(new[] { (byte)0xF5, (byte)pinNumber, (byte)(value ? 1 : 0) }, 0, 3);
+            Connection.Write(new[] { (byte)0xF5, (byte)pinNumber, (byte)(value ? 1 : 0) }, 0, 3);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetAnalogReportMode"/>
@@ -390,7 +391,7 @@ namespace Solid.Arduino.Firmata
             if (channel < 0 || channel > 15)
                 throw new ArgumentOutOfRangeException(nameof(channel), Messages.ArgumentEx_ChannelRange0_15);
 
-            _connection.Write(new[] { (byte)(0xC0 | channel), (byte)(enable ? 1 : 0) }, 0, 2);
+            Connection.Write(new[] { (byte)(0xC0 | channel), (byte)(enable ? 1 : 0) }, 0, 2);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetDigitalPort"/>
@@ -402,7 +403,7 @@ namespace Solid.Arduino.Firmata
             if (pins < 0 || pins > 0xFF)
                 throw new ArgumentOutOfRangeException(nameof(pins), Messages.ArgumentEx_ValueRange0_255);
 
-            _connection.Write(new[] { (byte)(DigitalMessage | portNumber), (byte)(pins & 0x7F), (byte)((pins >> 7) & 0x03) }, 0, 3);
+            Connection.Write(new[] { (byte)(DigitalMessage | portNumber), (byte)(pins & 0x7F), (byte)((pins >> 7) & 0x03) }, 0, 3);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetDigitalReportMode"/>
@@ -411,7 +412,7 @@ namespace Solid.Arduino.Firmata
             if (portNumber < 0 || portNumber > 15)
                 throw new ArgumentOutOfRangeException(nameof(portNumber), Messages.ArgumentEx_PortRange0_15);
 
-            _connection.Write(new[] { (byte)(0xD0 | portNumber), (byte)(enable ? 1 : 0) }, 0, 2);
+            Connection.Write(new[] { (byte)(0xD0 | portNumber), (byte)(enable ? 1 : 0) }, 0, 2);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetDigitalPinMode"/>
@@ -420,7 +421,7 @@ namespace Solid.Arduino.Firmata
             if (pinNumber < 0 || pinNumber > 127)
                 throw new ArgumentOutOfRangeException(nameof(pinNumber), Messages.ArgumentEx_PinRange0_127);
 
-            _connection.Write(new byte[] { 0xF4, (byte)pinNumber, (byte)mode }, 0, 3);
+            Connection.Write(new byte[] { 0xF4, (byte)pinNumber, (byte)mode }, 0, 3);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetSamplingInterval"/>
@@ -437,7 +438,7 @@ namespace Solid.Arduino.Firmata
                 (byte)((milliseconds >> 7) & 0x7F),
                 SysExEnd
             };
-            _connection.Write(command, 0, 5);
+            Connection.Write(command, 0, 5);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SendStringData"/>
@@ -459,7 +460,7 @@ namespace Solid.Arduino.Firmata
 
             command[command.Length - 1] = SysExEnd;
 
-            _connection.Write(command, 0, command.Length);
+            Connection.Write(command, 0, command.Length);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.RequestFirmware"/>
@@ -486,7 +487,7 @@ namespace Solid.Arduino.Firmata
         /// <inheritdoc cref="IFirmataProtocol.RequestProtocolVersion"/>
         public void RequestProtocolVersion()
         {
-            _connection.Write(new byte[] { 0xF9 }, 0, 1);
+            Connection.Write(new byte[] { 0xF9 }, 0, 1);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetProtocolVersion"/>
@@ -559,7 +560,7 @@ namespace Solid.Arduino.Firmata
                 (byte)pinNumber,
                 SysExEnd
             };
-            _connection.Write(command, 0, 4);
+            Connection.Write(command, 0, 4);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetPinState"/>
@@ -610,7 +611,7 @@ namespace Solid.Arduino.Firmata
                 (byte)((maxPulse >> 7) & 0x7F),
                 SysExEnd
             };
-            _connection.Write(command, 0, 8);
+            Connection.Write(command, 0, 8);
         }
 
         #endregion
@@ -640,7 +641,7 @@ namespace Solid.Arduino.Firmata
                 (byte)((microseconds >> 7) & 0x7F),
                 SysExEnd
             };
-            _connection.Write(command, 0, 5);
+            Connection.Write(command, 0, 5);
         }
 
         /// <inheritdoc cref="II2CProtocol.WriteI2C"/>
@@ -663,7 +664,7 @@ namespace Solid.Arduino.Firmata
 
             command[command.Length - 1] = SysExEnd;
 
-            _connection.Write(command, 0, command.Length);
+            Connection.Write(command, 0, command.Length);
         }
 
         /// <inheritdoc cref="II2CProtocol.ReadI2COnce(int,int)"/>
@@ -746,7 +747,7 @@ namespace Solid.Arduino.Firmata
             command[3] = 0x18;
             command[4] = SysExEnd;
 
-            _connection.Write(command, 0, command.Length);
+            Connection.Write(command, 0, command.Length);
         }
 
         #endregion
@@ -756,7 +757,7 @@ namespace Solid.Arduino.Firmata
         public void Dispose()
         {
             if (!_gotOpenConnection)
-                _connection.Close();
+                Connection.Close();
 
             GC.SuppressFinalize(this);
         }
@@ -859,7 +860,7 @@ namespace Solid.Arduino.Firmata
                 command,
                 SysExEnd
             };
-            _connection.Write(message, 0, 3);
+            Connection.Write(message, 0, 3);
         }
 
         private void I2CSlaveRead(bool continuous, int slaveAddress, int slaveRegister = -1, int bytesToRead = 0)
@@ -899,21 +900,21 @@ namespace Solid.Arduino.Firmata
 
             command[command.Length - 1] = SysExEnd;
 
-            _connection.Write(command, 0, command.Length);
+            Connection.Write(command, 0, command.Length);
         }
 
         /// <summary>
         /// Event handler processing data bytes received on the serial port.
         /// </summary>
-        private void SerialDataReceived(object sender, SerialDataReceivedEventArgs e)
+        private void SerialDataReceived(object sender, DataReceivedEventArgs e)
         {
-            while (_connection.IsOpen && _connection.BytesToRead > 0)
+            while (Connection.IsOpen && Connection.BytesToRead > 0)
             {
                 int serialByte = 0;
 
                 try
                 {
-                  serialByte = _connection.ReadByte();
+                  serialByte = Connection.ReadByte();
                 }
                 catch (Exception exception)
                 {
@@ -972,7 +973,7 @@ namespace Solid.Arduino.Firmata
                 {
                     // No pending Read/ReadLine/ReadTo requests.
                     // Handle StringReceived event.
-                    if (c == _connection.NewLine[_connection.NewLine.Length - 1]
+                    if (c == Connection.NewLine[Connection.NewLine.Length - 1]
                         || serialByte == 0x1A
                         || serialByte == 0x00) // NewLine, EOF or terminating 0-byte?
                     {
@@ -988,7 +989,7 @@ namespace Solid.Arduino.Firmata
             switch (_currentStringRequest.Mode)
             {
                 case StringReadMode.ReadLine:
-                    if (c == _connection.NewLine[0] || serialByte == 0x1A)
+                    if (c == Connection.NewLine[0] || serialByte == 0x1A)
                         EnqueueReceivedString(new string(_stringBuffer, 0, _stringBufferIndex - 1));
                     else if (c == '\n') // Ignore linefeed, just in case cr+lf pair was expected.
                         _stringBufferIndex--;

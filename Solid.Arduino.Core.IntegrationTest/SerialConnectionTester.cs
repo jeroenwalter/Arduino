@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Solid.Arduino;
 using Solid.Arduino.Core;
+using Solid.Arduino.Firmata;
 
 namespace Solid.Arduino.IntegrationTest
 {

@@ -113,7 +113,7 @@ namespace Solid.Arduino.Test
             session.ConfigureServo(5, 256, 257);
         }
 
-        private IServoProtocol CreateServoSession(ISerialConnection connection, int timeout = -1)
+        private IServoProtocol CreateServoSession(IDataConnection connection, int timeout = -1)
         {
             var session = new ArduinoSession(connection);
             session.TimeOut = timeout;

@@ -4,17 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{2688801E-DD4C-4BEE-8E1D-3C1E3E448D73}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{FDF9E431-2390-4C7B-AE60-10183439A683}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Solid.Arduino.Run</RootNamespace>
-    <AssemblyName>Solid.Arduino.Run</AssemblyName>
+    <RootNamespace>Solid.Arduino</RootNamespace>
+    <AssemblyName>Solid.Arduino</AssemblyName>
     <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,15 +21,16 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Solid.Arduino.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Solid.Arduino.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -42,26 +42,36 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConsoleLogger.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="EnhancedSerialPort.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Messages.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Messages.resx</DependentUpon>
+    </Compile>
+    <Compile Include="EnhancedSerialConnection.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SerialConnectionFactory.cs" />
+    <Compile Include="SerialConnection.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="SerialPortFixer.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <EmbeddedResource Include="Messages.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Messages.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Solid.Arduino.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Solid.Arduino.Firmata\Solid.Arduino.Firmata.csproj">
-      <Project>{AF35F810-6CE9-4A99-8681-3259C063626C}</Project>
+      <Project>{af35f810-6ce9-4a99-8681-3259c063626c}</Project>
       <Name>Solid.Arduino.Firmata</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Solid.Arduino.Serial\Solid.Arduino.Serial.csproj">
-      <Project>{3590c7f5-c20c-4a96-9e50-9771c1a10944}</Project>
-      <Name>Solid.Arduino.Serial</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Solid.Arduino\Solid.Arduino.csproj">
-      <Project>{fdf9e431-2390-4c7b-ae60-10183439a683}</Project>
-      <Name>Solid.Arduino</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

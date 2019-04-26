@@ -4,34 +4,44 @@ using System.Linq;
 using Solid.Arduino.Core;
 using Solid.Arduino.Firmata;
 using Solid.Arduino.Firmata.I2c;
+using Solid.Arduino.Serial;
 
 namespace Solid.Arduino.Run
 {
-    class Program
+  class Program
     {
+        static IDataConnectionFactory _serialConnectionFactory = new SerialConnectionFactory();
+        private static ILogger _logger = new ConsoleLogger();
+
         static void Main(string[] args)
         {
-            ISerialConnection connection = GetConnection();
+            using ArduinoSession session = GetFirmataSession();
+            if (session != null)
+            {
+                DisplayPortCapabilities(session);
+                Console.WriteLine("Press a key");
+                Console.ReadKey(true);
 
-            if (connection != null)
-                using (var session = new ArduinoSession(connection))
-                    PerformBasicTest(session);
+                PerformBasicTest(session);
+            }
 
             Console.WriteLine("Press a key");
             Console.ReadKey(true);
         }
 
-        private static ISerialConnection GetConnection()
+        private static ArduinoSession GetFirmataSession()
         {
-            Console.WriteLine("Searching Arduino connection...");
-            ISerialConnection connection = SerialConnection.Find();
+            var serialConnectionFinder = new SerialConnectionFinder(_serialConnectionFactory, _logger);
 
-            if (connection == null)
+            Console.WriteLine("Searching Arduino connection...");
+            ArduinoSession session = serialConnectionFinder.FindFirmata();
+
+            if (session == null)
                 Console.WriteLine("No connection found. Make sure your Arduino board is attached to a USB port.");
             else
-                Console.WriteLine($"Connected to port {connection.PortName} at {connection.BaudRate} Baud.");
+                Console.WriteLine($"Connected to port {((SerialConnection)session.Connection).Name} at {((SerialConnection)session.Connection).BaudRate} Baud.");
 
-            return connection;
+            return session;
         }
 
         private static void PerformBasicTest(IFirmataProtocol session)
@@ -51,36 +61,32 @@ namespace Solid.Arduino.Run
         }
 
 
-        private static void DisplayPortCapabilities()
+        private static void DisplayPortCapabilities(ArduinoSession session)
         {
-            using (var session = new ArduinoSession(new SerialConnection("COM3", SerialBaudRate.Bps_57600)))
-            {
-                BoardCapability cap = session.GetBoardCapability();
-                Console.WriteLine();
-                Console.WriteLine("Board Capability:");
+            BoardCapability cap = session.GetBoardCapability();
+            Console.WriteLine();
+            Console.WriteLine("Board Capability:");
 
-                foreach (var pin in cap.Pins)
-                {
-                    Console.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}, Serial: {9}, Encoder: {10}, Input-pullup: {11}",
-                        pin.PinNumber,
-                        pin.DigitalInput,
-                        pin.DigitalOutput,
-                        pin.Analog,
-                        pin.AnalogResolution,
-                        pin.Pwm,
-                        pin.PwmResolution,
-                        pin.Servo,
-                        pin.ServoResolution,
-                        pin.Serial,
-                        pin.Encoder,
-                        pin.InputPullup);
-                }
+            foreach (var pin in cap.Pins)
+            {
+                Console.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}, Serial: {9}, Encoder: {10}, Input-pullup: {11}",
+                    pin.PinNumber,
+                    pin.DigitalInput,
+                    pin.DigitalOutput,
+                    pin.Analog,
+                    pin.AnalogResolution,
+                    pin.Pwm,
+                    pin.PwmResolution,
+                    pin.Servo,
+                    pin.ServoResolution,
+                    pin.Serial,
+                    pin.Encoder,
+                    pin.InputPullup);
             }
         }
 
-        private void TimeTest()
+        private void TimeTest(ArduinoSession session)
         {
-            var session = new ArduinoSession(new SerialConnection("COM3", SerialBaudRate.Bps_57600)) {TimeOut = 1000};
             session.MessageReceived += Session_OnMessageReceived;
 
             var firmata = (II2CProtocol)session;
@@ -92,7 +98,7 @@ namespace Solid.Arduino.Run
             Console.WriteLine("Press a key to abort.");
             Console.ReadKey(true);
 
-            session.Dispose();
+            session.MessageReceived -= Session_OnMessageReceived;
         }
 
         void Session_OnMessageReceived(object sender, FirmataMessageEventArgs eventArgs)
@@ -113,7 +119,7 @@ namespace Solid.Arduino.Run
             Console.WriteLine("Message {0} received: {1}", eventArgs.Value.Type, o);
         }
 
-        static void SimpelTest(ISerialConnection connection)
+        static void SimpelTest(IDataConnection connection)
         {
             var session = new ArduinoSession(connection, timeOut: 2500);
             IFirmataProtocol firmata = session;

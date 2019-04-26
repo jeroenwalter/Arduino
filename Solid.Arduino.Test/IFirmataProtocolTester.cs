@@ -983,7 +983,7 @@ namespace Solid.Arduino.Test
          }
 
 
-        private IFirmataProtocol CreateFirmataSession(ISerialConnection connection, int timeout = -1)
+        private IFirmataProtocol CreateFirmataSession(IDataConnection connection, int timeout = -1)
         {
             var session = new ArduinoSession(connection);
             session.TimeOut = timeout;

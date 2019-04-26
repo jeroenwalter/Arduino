@@ -451,7 +451,7 @@ namespace Solid.Arduino.Test
             Assert.AreEqual("alpha", data);
         }
 
-        private IStringProtocol CreateSerialSession(ISerialConnection connection, int timeout = -1)
+        private IStringProtocol CreateSerialSession(IDataConnection connection, int timeout = -1)
         {
             var session = new ArduinoSession(connection);
             session.TimeOut = timeout;

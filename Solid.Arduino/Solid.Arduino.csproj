@@ -50,7 +50,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Messages.resx</DependentUpon>
     </Compile>
-    <Compile Include="SerialBaudRate.cs" />
     <Compile Include="EnhancedSerialConnection.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -73,6 +72,10 @@
     <ProjectReference Include="..\Solid.Arduino.Firmata\Solid.Arduino.Firmata.csproj">
       <Project>{af35f810-6ce9-4a99-8681-3259c063626c}</Project>
       <Name>Solid.Arduino.Firmata</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Solid.Arduino.Serial\Solid.Arduino.Serial.csproj">
+      <Project>{3590C7F5-C20C-4A96-9E50-9771C1A10944}</Project>
+      <Name>Solid.Arduino.Serial</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

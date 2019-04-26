@@ -7,11 +7,8 @@ using Solid.Arduino.Firmata;
 
 namespace Solid.Arduino.Test
 {
-    internal class MockSerialConnection: ISerialConnection
+    internal class MockSerialConnection: IDataConnection
     {
-        private static readonly ConstructorInfo SerialDataReceivedEventArgsConstructor = typeof(SerialDataReceivedEventArgs)
-                .GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(SerialData) }, null);
-        
         private bool _isOpen;
         private string _newLine = "\n";
 
@@ -21,7 +18,7 @@ namespace Solid.Arduino.Test
         private byte[] _currentRequest, _currentResponse;
         private int _responseByteCount, _currentResponseIndex, _currentRequestIndex;
         
-        #region ISerialConnection Members
+        #region IDataConnection Members
 
         public int BaudRate
         {
@@ -29,14 +26,14 @@ namespace Solid.Arduino.Test
             set {}
         }
 
-        public string PortName
+        public string Name
         {
             get { return "COM3"; }
             set {}
         }
 
         public int InfiniteTimeout => -1;
-        public event SerialDataReceivedEventHandler DataReceived;
+        public event DataReceivedEventHandler DataReceived;
 
         public bool IsOpen
         {
@@ -247,12 +244,12 @@ namespace Solid.Arduino.Test
                 || response.Length == 0)
                 return;
 
-            var charReceivedEventArgs = new SerialDataReceivedEventArgs(SerialData.Chars);
+            var charReceivedEventArgs = new DataReceivedEventArgs(SerialData.Chars);
 
             for (int x = 0; x < response.Length; x++)
             {
                 if (response[x] == 26)
-                    DataReceived(this, new SerialDataReceivedEventArgs(SerialData.Eof));
+                    DataReceived(this, new DataReceivedEventArgs(SerialData.Eof));
                 else
                     DataReceived(this, charReceivedEventArgs);
             }

@@ -24,7 +24,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Threading;
-using Solid.Arduino.Firmata;
+using SerialDataReceivedEventArgs = Solid.Arduino.Firmata.SerialDataReceivedEventArgs;
+using SerialDataReceivedEventHandler = Solid.Arduino.Firmata.SerialDataReceivedEventHandler;
 
 namespace Solid.Arduino
 {
@@ -172,9 +173,9 @@ namespace Solid.Arduino
             while (IsOpen);
         }
 
-        private void OnDataReceived(DataReceivedEventArgs args)
+        private void OnDataReceived(SerialDataReceivedEventArgs args)
         {
-            var handler = (DataReceivedEventHandler)Events[_dataReceived];
+            var handler = (SerialDataReceivedEventHandler)Events[_dataReceived];
 
             if (handler != null)
             {

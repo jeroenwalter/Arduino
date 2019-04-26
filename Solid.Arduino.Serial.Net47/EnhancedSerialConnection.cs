@@ -2,10 +2,9 @@
 using System.IO.Ports;
 using System.Linq;
 using Solid.Arduino.Firmata;
-using Solid.Arduino.Serial;
-using SerialData = Solid.Arduino.Serial.SerialData;
-using SerialDataReceivedEventArgs = Solid.Arduino.Serial.SerialDataReceivedEventArgs;
-
+using SerialData = Solid.Arduino.Firmata.SerialData;
+using SerialDataReceivedEventArgs = Solid.Arduino.Firmata.SerialDataReceivedEventArgs;
+using SerialDataReceivedEventHandler = Solid.Arduino.Firmata.SerialDataReceivedEventHandler;
 
 namespace Solid.Arduino
 {
@@ -14,7 +13,7 @@ namespace Solid.Arduino
     /// </summary>
     /// <seealso href="http://www.mono-project.com/">The official Mono project site</seealso>
     /// <inheritdoc />
-    public class EnhancedSerialConnection : EnhancedSerialPort, IDataConnection
+    public class EnhancedSerialConnection : EnhancedSerialPort, ISerialConnection
     {
         #region Constructors
 
@@ -26,7 +25,10 @@ namespace Solid.Arduino
         {
         }
 
-        
+        private void OnDataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+        {
+          DataReceived?.Invoke(sender, new SerialDataReceivedEventArgs((SerialData)e.EventType));
+        }
 
         /// <summary>
         /// Initializes a new instance of <see cref="EnhancedSerialConnection"/> class on the given serial port and at the given baud rate.
@@ -43,12 +45,26 @@ namespace Solid.Arduino
 
         #endregion
 
+        #region Fields
+
+        #endregion
+
         #region Public Methods & Properties
 
+        /// <inheritdoc cref="SerialConnection.Find()"/>
+        public static ISerialConnection Find()
+        {
+            return SerialConnection.Find();
+        }
+
+        /// <inheritdoc cref="SerialConnection.Find(string, string)"/>
+        public static ISerialConnection Find(string query, string expectedReply)
+        {
+            return SerialConnection.Find(query, expectedReply);
+        }
 
         public new int InfiniteTimeout => SerialPort.InfiniteTimeout;
-        public new event DataReceivedEventHandler DataReceived;
-        public string Name => PortName;
+        public new event SerialDataReceivedEventHandler DataReceived;
 
         /// <inheritdoc cref="SerialPort.Close"/>
         public new void Close()
@@ -64,10 +80,6 @@ namespace Solid.Arduino
         #endregion
 
         #region Private Methods
-        private void OnDataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
-        {
-            DataReceived?.Invoke(sender, new SerialDataReceivedEventArgs((SerialData)e.EventType));
-        }
 
         private static string GetLastPortName()
         {

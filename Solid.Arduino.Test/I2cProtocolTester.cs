@@ -358,7 +358,7 @@ namespace Solid.Arduino.Test
             session.StopI2CReading();
         }
 
-        private II2CProtocol CreateFirmataSession(ISerialConnection connection, int timeout = -1)
+        private II2CProtocol CreateFirmataSession(IDataConnection connection, int timeout = -1)
         {
             var session = new ArduinoSession(connection);
             session.TimeOut = timeout;

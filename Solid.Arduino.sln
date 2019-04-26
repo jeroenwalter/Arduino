@@ -23,11 +23,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Solid.Arduino.Firmata", "Solid.Arduino.Firmata\Solid.Arduino.Firmata.csproj", "{AF35F810-6CE9-4A99-8681-3259C063626C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Solid.Arduino.Core", "Solid.Arduino.Core\Solid.Arduino.Core.csproj", "{AEC17458-E07C-496A-94E4-22CD4723DB8E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Solid.Arduino.Core", "Solid.Arduino.Core\Solid.Arduino.Core.csproj", "{AEC17458-E07C-496A-94E4-22CD4723DB8E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Solid.Arduino.Core.IntegrationTest", "Solid.Arduino.Core.IntegrationTest\Solid.Arduino.Core.IntegrationTest.csproj", "{41CEE3E7-0F8E-4633-9520-29FA5CFD3F9F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Solid.Arduino.Core.Run", "Solid.Arduino.Core.Run\Solid.Arduino.Core.Run.csproj", "{AF077C10-B278-4C0C-8499-F1153625709D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Solid.Arduino.Serial", "Solid.Arduino.Serial\Solid.Arduino.Serial.csproj", "{3590C7F5-C20C-4A96-9E50-9771C1A10944}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,6 +75,10 @@ Global
 		{AF077C10-B278-4C0C-8499-F1153625709D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF077C10-B278-4C0C-8499-F1153625709D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF077C10-B278-4C0C-8499-F1153625709D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3590C7F5-C20C-4A96-9E50-9771C1A10944}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3590C7F5-C20C-4A96-9E50-9771C1A10944}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3590C7F5-C20C-4A96-9E50-9771C1A10944}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3590C7F5-C20C-4A96-9E50-9771C1A10944}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
