@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using Solid.Arduino.Firmata;
 
-namespace Solid.Arduino.Run
+namespace Solid.Arduino.Core.Run
 {
   public class ConsoleLogger : ILogger
   {

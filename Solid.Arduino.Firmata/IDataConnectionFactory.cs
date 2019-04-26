@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using Solid.Arduino.Firmata;
+﻿using System.Collections.Generic;
 
-namespace Solid.Arduino.Serial
+namespace Solid.Arduino.Firmata
 {
     public interface IDataConnectionFactory
     {

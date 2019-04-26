@@ -1,14 +1,7 @@
-﻿using System;
-using System.IO.Ports;
-using System.Runtime.CompilerServices;
-using System.Threading;
+﻿using System.IO.Ports;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using Solid.Arduino;
-using Solid.Arduino.Core;
-using Solid.Arduino.Firmata;
-
-namespace Solid.Arduino.IntegrationTest
+namespace Solid.Arduino.Core.IntegrationTest
 {
     /// <summary>
     /// Performs tests with a connected Arduino device.

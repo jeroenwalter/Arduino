@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Threading;
 using System.Linq;
-using Solid.Arduino.Core;
+using System.Threading;
 using Solid.Arduino.Firmata;
 using Solid.Arduino.Firmata.I2c;
 using Solid.Arduino.Serial;
 
-namespace Solid.Arduino.Run
+namespace Solid.Arduino.Core.Run
 {
   class Program
     {

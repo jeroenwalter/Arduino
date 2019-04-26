@@ -1,4 +1,4 @@
-﻿namespace Solid.Arduino.Serial
+﻿namespace Solid.Arduino.Firmata
 {
     public interface IDataConnectionConfiguration
     {
