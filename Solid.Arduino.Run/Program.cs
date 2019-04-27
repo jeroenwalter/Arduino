@@ -9,7 +9,7 @@ namespace Solid.Arduino.Run
 {
   class Program
     {
-        static IDataConnectionFactory _serialConnectionFactory = new SerialConnectionFactory();
+        static IDataConnectionFactory _serialConnectionFactory = new EnhancedSerialConnectionFactory();
         private static ILogger _logger = new ConsoleLogger();
 
         static void Main(string[] args)

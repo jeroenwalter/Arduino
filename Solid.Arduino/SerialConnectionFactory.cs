@@ -3,7 +3,7 @@ using System.IO.Ports;
 using Solid.Arduino.Firmata;
 using Solid.Arduino.Serial;
 
-namespace Solid.Arduino.Run
+namespace Solid.Arduino
 {
     public class SerialConnectionFactory : IDataConnectionFactory
     {
@@ -11,7 +11,7 @@ namespace Solid.Arduino.Run
 
         public IDataConnection Create(string deviceName, IDataConnectionConfiguration configuration)
         {
-            return new EnhancedSerialConnection(deviceName, ((SerialConnectionConfiguration) configuration).BaudRate);
+            return new SerialConnection(deviceName, ((SerialConnectionConfiguration) configuration).BaudRate);
         }
     }
 }
