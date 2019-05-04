@@ -14,7 +14,7 @@ namespace Solid.Arduino.Test
     [TestClass]
     public class IServoProtocolTester
     {
-        private readonly Queue<FirmataMessage> _messagesReceived = new Queue<FirmataMessage>();
+        private readonly Queue<IFirmataMessage> _messagesReceived = new Queue<IFirmataMessage>();
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentOutOfRangeException))]

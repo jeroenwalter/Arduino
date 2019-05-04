@@ -13,7 +13,7 @@ namespace Solid.Arduino.Test
     [TestClass]
     public class IFirmataProtocolTester
     {
-        private readonly Queue<FirmataMessage> _messagesReceived = new Queue<FirmataMessage>();
+        private readonly Queue<IFirmataMessage> _messagesReceived = new Queue<IFirmataMessage>();
 
         [TestMethod]
         public void ResetBoard()
@@ -25,9 +25,9 @@ namespace Solid.Arduino.Test
             session.ResetBoard();
 
             Assert.AreEqual(1, _messagesReceived.Count);
-            FirmataMessage message = _messagesReceived.Dequeue();
-            Assert.AreEqual(MessageType.ProtocolVersion, message.Type);
-            var version = (ProtocolVersion)message.Value;
+            var message = _messagesReceived.Dequeue();
+            Assert.IsInstanceOfType(message, typeof(FirmataMessage<ProtocolVersion>));
+            var version = ((FirmataMessage<ProtocolVersion>)message).Value;
             Assert.AreEqual(2, version.Major);
             Assert.AreEqual(3, version.Minor);
         }
@@ -40,7 +40,7 @@ namespace Solid.Arduino.Test
 
             connection.EnqueueRequestAndResponse(new byte[] { 0xF9 }, new byte[] { 0xF9, 2, 3 });
 
-            ProtocolVersion version = session.GetProtocolVersion();
+            var version = session.GetProtocolVersion();
             Assert.AreEqual(2, version.Major);
             Assert.AreEqual(3, version.Minor);
         }
@@ -52,7 +52,7 @@ namespace Solid.Arduino.Test
             var session = CreateFirmataSession(connection);
 
             connection.EnqueueRequestAndResponse(new byte[] { 0xF9 }, new byte[] { 0xF9, 2, 3 });
-            ProtocolVersion version = session.GetProtocolVersionAsync().Result;
+            var version = session.GetProtocolVersionAsync().Result;
             Assert.AreEqual(2, version.Major);
             Assert.AreEqual(3, version.Minor);
             Assert.AreEqual(1, _messagesReceived.Count);
@@ -70,9 +70,9 @@ namespace Solid.Arduino.Test
             session.RequestProtocolVersion();
 
             Assert.AreEqual(1, _messagesReceived.Count, "Message event error");
-            FirmataMessage message = _messagesReceived.Dequeue();
-            Assert.AreEqual(MessageType.ProtocolVersion, message.Type);
-            var version = (ProtocolVersion)message.Value;
+            var message = _messagesReceived.Dequeue();
+            Assert.IsInstanceOfType(message, typeof(FirmataMessage<ProtocolVersion>));
+            var version = ((FirmataMessage<ProtocolVersion>)message).Value;
             Assert.AreEqual(2, version.Major);
             Assert.AreEqual(3, version.Minor);
         }
@@ -91,7 +91,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(Name.To14BitIso());
             connection.EnqueueResponse(0xF7);
 
-            Firmware firmware = session.GetFirmware();
+            var firmware = session.GetFirmware();
             Assert.AreEqual(firmware.MajorVersion, majorVersion);
             Assert.AreEqual(firmware.MinorVersion, minorVersion);
             Assert.AreEqual(firmware.Name, Name);
@@ -112,7 +112,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(Name.To14BitIso());
             connection.EnqueueResponse(0xF7);
 
-            Firmware firmware = session.GetFirmwareAsync().Result;
+            var firmware = session.GetFirmwareAsync().Result;
             Assert.AreEqual(firmware.MajorVersion, majorVersion);
             Assert.AreEqual(firmware.MinorVersion, minorVersion);
             Assert.AreEqual(firmware.Name, Name);
@@ -134,10 +134,10 @@ namespace Solid.Arduino.Test
 
             session.RequestFirmware();
             Assert.AreEqual(1, _messagesReceived.Count, "Message event error");
-            FirmataMessage message = _messagesReceived.Dequeue();
-            Assert.AreEqual(MessageType.FirmwareResponse, message.Type);
-            var firmware = (Firmware)message.Value;
-
+            var message = _messagesReceived.Dequeue();
+            Assert.IsInstanceOfType(message, typeof(FirmataMessage<Firmware>));
+            var firmware = ((FirmataMessage<Firmware>)message).Value;
+            
             Assert.AreEqual(firmware.MajorVersion, majorVersion);
             Assert.AreEqual(firmware.MinorVersion, minorVersion);
             Assert.AreEqual(firmware.Name, Name);
@@ -154,7 +154,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0, 1, 1, 1, 3, 10, 6, 1, 0x7F);
             connection.EnqueueResponse(0xF7);
 
-            BoardCapability capability = session.GetBoardCapability();
+            var capability = session.GetBoardCapability();
             Assert.AreEqual(1, capability.Pins.Length);
 
             Assert.AreEqual(0, capability.Pins[0].PinNumber);
@@ -184,7 +184,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(1, 1, 3, 7, 4, 7, 0x7F);
             connection.EnqueueResponse(0xF7);
 
-            BoardCapability capability = session.GetBoardCapabilityAsync().Result;
+            var capability = session.GetBoardCapabilityAsync().Result;
             Assert.AreEqual(3, capability.Pins.Length);
 
             Assert.AreEqual(0, capability.Pins[0].PinNumber);
@@ -231,10 +231,10 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0xF7);
 
             session.RequestBoardCapability();
-            FirmataMessage message = _messagesReceived.Dequeue();
+            var message = _messagesReceived.Dequeue();
 
-            Assert.AreEqual(MessageType.CapabilityResponse, message.Type);
-            BoardCapability capability = (BoardCapability)message.Value;
+            Assert.IsInstanceOfType(message, typeof(FirmataMessage<BoardCapability>));
+            var capability = ((FirmataMessage<BoardCapability>)message).Value;
 
             Assert.AreEqual(2, capability.Pins.Length);
             Assert.AreEqual(0, capability.Pins[0].PinNumber);
@@ -270,7 +270,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x0F);
             connection.EnqueueResponse(0xF7);
 
-            BoardAnalogMapping mapping = session.GetBoardAnalogMapping();
+            var mapping = session.GetBoardAnalogMapping();
 
             Assert.AreEqual(7, mapping.PinMappings.Length);
             Assert.AreEqual(5, mapping.PinMappings[0].PinNumber);
@@ -299,7 +299,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x7F, 0x7F);
             connection.EnqueueResponse(0xF7);
 
-            BoardAnalogMapping mapping = session.GetBoardAnalogMappingAsync().Result;
+            var mapping = session.GetBoardAnalogMappingAsync().Result;
 
             Assert.AreEqual(6, mapping.PinMappings.Length);
             Assert.AreEqual(0, mapping.PinMappings[0].PinNumber);
@@ -327,10 +327,10 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0xF7);
 
             session.RequestBoardAnalogMapping();
-            FirmataMessage message = _messagesReceived.Dequeue();
-            Assert.AreEqual(MessageType.AnalogMappingResponse, message.Type);
-
-            BoardAnalogMapping mapping = (BoardAnalogMapping)message.Value;
+            var message = _messagesReceived.Dequeue();
+   
+            Assert.IsInstanceOfType(message, typeof(FirmataMessage<BoardAnalogMapping>));
+            var mapping = ((FirmataMessage<BoardAnalogMapping>)message).Value;
 
             Assert.AreEqual(1, mapping.PinMappings.Length);
             Assert.AreEqual(0, mapping.PinMappings[0].PinNumber);
@@ -349,7 +349,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x00, 0x02, 0x7F, 0x07);
             connection.EnqueueResponse(0xF7);
 
-            PinState state = session.GetPinState(-1);
+            var state = session.GetPinState(-1);
         }
 
         [TestMethod]
@@ -364,7 +364,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x00, 0x02, 0x7F, 0x07);
             connection.EnqueueResponse(0xF7);
 
-            PinState state = session.GetPinState(128);
+            var state = session.GetPinState(128);
         }
 
         [TestMethod]
@@ -378,7 +378,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x00, 0x02, 0x7F, 0x07);
             connection.EnqueueResponse(0xF7);
 
-            PinState state = session.GetPinState(0);
+            var state = session.GetPinState(0);
 
             Assert.AreEqual(0, state.PinNumber);
             Assert.AreEqual(PinMode.AnalogInput, state.Mode);
@@ -396,7 +396,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x00, 0x02, 0x7F, 0x07);
             connection.EnqueueResponse(0xF7);
 
-            PinState state = session.GetPinState(127);
+            var state = session.GetPinState(127);
 
             Assert.AreEqual(0, state.PinNumber);
             Assert.AreEqual(PinMode.AnalogInput, state.Mode);
@@ -414,7 +414,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x7F, 0x03, 0x00, 0x02);
             connection.EnqueueResponse(0xF7);
 
-            PinState state = session.GetPinState(127);
+            var state = session.GetPinState(127);
 
             Assert.AreEqual(127, state.PinNumber);
             Assert.AreEqual(PinMode.PwmOutput, state.Mode);
@@ -432,7 +432,7 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0x05, 0x00, 0x01);
             connection.EnqueueResponse(0xF7);
 
-            PinState state = session.GetPinStateAsync(5).Result;
+            var state = session.GetPinStateAsync(5).Result;
 
             Assert.AreEqual(5, state.PinNumber);
             Assert.AreEqual(PinMode.DigitalInput, state.Mode);
@@ -451,10 +451,10 @@ namespace Solid.Arduino.Test
             connection.EnqueueResponse(0xF7);
 
             session.RequestPinState(1);
-            FirmataMessage message = _messagesReceived.Dequeue();
+            var message = _messagesReceived.Dequeue();
 
-            Assert.AreEqual(MessageType.PinStateResponse, message.Type);
-            PinState state = (PinState)message.Value;
+            Assert.IsInstanceOfType(message, typeof(FirmataMessage<PinState>));
+            var state = ((FirmataMessage<PinState>)message).Value;
 
             Assert.AreEqual(1, state.PinNumber);
             Assert.AreEqual(PinMode.DigitalOutput, state.Mode);
@@ -791,7 +791,7 @@ namespace Solid.Arduino.Test
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection);
-            int eventHits = 0;
+            var eventHits = 0;
 
             session.AnalogStateReceived += (o, e) =>
             {
@@ -815,7 +815,7 @@ namespace Solid.Arduino.Test
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection);
-            int eventHits = 0;
+            var eventHits = 0;
 
             session.AnalogStateReceived += (o, e) =>
             {
@@ -839,7 +839,7 @@ namespace Solid.Arduino.Test
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection);
-            int eventHits = 0;
+            var eventHits = 0;
 
             session.AnalogStateReceived += (o, e) =>
             {
@@ -863,7 +863,7 @@ namespace Solid.Arduino.Test
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection);
-            int eventHits = 0;
+            var eventHits = 0;
 
             session.AnalogStateReceived += (o, e) =>
             {
@@ -887,7 +887,7 @@ namespace Solid.Arduino.Test
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection);
-            int eventHits = 0;
+            var eventHits = 0;
 
             session.AnalogStateReceived += (o, e) =>
             {
@@ -933,12 +933,12 @@ namespace Solid.Arduino.Test
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection);
-            int eventHits = 0;
+            var eventHits = 0;
 
             session.MessageReceived += (o, e) =>
             {
-                Assert.AreEqual(MessageType.StringData, e.Value.Type);
-                Assert.AreEqual("Hello!", ((StringData)e.Value.Value).Text);
+                Assert.IsInstanceOfType(e.Value, typeof(FirmataMessage<StringData>));
+                Assert.AreEqual("Hello!", ((FirmataMessage<StringData>)e.Value).Value.Text);
                 eventHits++;
             };
 
@@ -1016,14 +1016,36 @@ namespace Solid.Arduino.Test
         }
 
         [TestMethod]
+        public void SendSysExWithReply_SendUserDefinedSysEx_SysExMessageReplyReceived()
+        {
+            var connection = new MockSerialConnection();
+            var session = CreateFirmataSession(connection, 3);
+            var sysEx = new SysEx(0x01);
+            
+            connection.EnqueueRequestAndResponse(new byte[] { 0xF0, 0x01, 0xF7 },
+                new byte[]
+                {
+                    0xF0,
+                    0x01,
+                    0x01, 0x02, 0x03, 0x04,
+                    0xF7
+                });
+
+            var reply = session.SendSysExWithReply(sysEx, ex => ex.Command == 0x01 && ex.Payload[0] == 0x01);
+
+            Assert.AreEqual(0x01, reply.Command);
+            CollectionAssert.AreEqual(new byte[] { 0x01, 0x02, 0x03, 0x04 }, reply.Payload);
+        }
+
+        [TestMethod]
         [Ignore]
-        public void SendSysExWithReply_ReplyReceived()
+        public void SendSysExWithReply_SendFirmwareRequest_FirmwareMessageReplyReceived()
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection, 3);
             // Send Firmware message via SendSysExWithReply.
             var sysEx = new SysEx(0x79);
-            
+
             connection.EnqueueRequestAndResponse(new byte[] { 0xF0, 0x79, 0xF7 },
                 new byte[]
                 {
@@ -1034,7 +1056,7 @@ namespace Solid.Arduino.Test
                     0xF7
                 });
 
-            SysEx reply = session.SendSysExWithReply(sysEx, ex => ex.Command == 0x79);
+            var reply = session.SendSysExWithReply(sysEx, ex => ex.Command == 0x79);
 
             var f = CreateFirmware(reply);
             Assert.AreEqual(1, f.MajorVersion);
@@ -1053,18 +1075,8 @@ namespace Solid.Arduino.Test
                 MinorVersion = reply.Payload[3]
             };
 
-            firmware.Name = DecodeToString(reply);
+            firmware.Name = reply.Payload.ConvertFrom14BitPerBytePacketsToString(4);
             return firmware;
-        }
-
-        private static string DecodeToString(SysEx reply)
-        {
-            var builder = new StringBuilder(reply.Payload.Length);
-
-            for (int x = 4; x < reply.Payload.Length; x += 2)
-                builder.Append((char) (reply.Payload[x] | (reply.Payload[x + 1] << 7)));
-
-            return builder.ToString();
         }
 
         [TestMethod]

@@ -53,7 +53,9 @@ namespace Solid.Arduino.Firmata
         /// <summary>
         /// Reads a byte from the underlying serial input data stream.
         /// </summary>
-        /// <returns>A byte value</returns>
+        /// <returns>
+        /// The byte, cast to an Int32, or -1 if the end of the stream has been read.
+        /// </returns>
         int ReadByte();
 
         /// <summary>

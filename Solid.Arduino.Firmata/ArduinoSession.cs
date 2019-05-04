@@ -58,8 +58,6 @@ namespace Solid.Arduino.Firmata
     {
         #region Type declarations
 
-        private delegate void ProcessMessageHandler(int messageByte);
-
         private enum MessageHeader
         {
             AnalogState = 0xE0, // 224
@@ -118,16 +116,17 @@ namespace Solid.Arduino.Firmata
         private const int MaxQueueLength = 100;
 
         private readonly bool _gotOpenConnection;
-        private readonly LinkedList<FirmataMessage> _receivedMessageList = new LinkedList<FirmataMessage>();
+        private readonly LinkedList<IFirmataMessage> _receivedMessageList = new LinkedList<IFirmataMessage>();
         private readonly Queue<string> _receivedStringQueue = new Queue<string>();
-        private ConcurrentQueue<FirmataMessage> _awaitedMessagesQueue = new ConcurrentQueue<FirmataMessage>();
         private ConcurrentQueue<StringRequest> _awaitedStringsQueue = new ConcurrentQueue<StringRequest>();
         private StringRequest _currentStringRequest;
 
         private int _messageTimeout = -1;
-        private ProcessMessageHandler _processMessage;
+        private Action<int> _processMessageFunction;
         private int _messageBufferIndex, _stringBufferIndex;
+        // TODO: make _messageBuffer byte[] instead of int[]
         private readonly int[] _messageBuffer = new int[BufferSize];
+        // TODO: remove string messaging from ArduinoSession
         private readonly char[] _stringBuffer = new char[BufferSize];
 
         #endregion
@@ -199,8 +198,7 @@ namespace Solid.Arduino.Firmata
             {
                 Connection.Close();
                 _receivedMessageList.Clear();
-                _processMessage = null;
-                _awaitedMessagesQueue = new ConcurrentQueue<FirmataMessage>();
+                _processMessageFunction = null;
                 _awaitedStringsQueue = new ConcurrentQueue<StringRequest>();
                 Connection.Open();
             }
@@ -250,7 +248,7 @@ namespace Solid.Arduino.Firmata
         /// <inheritdoc cref="IStringProtocol.ReadLineAsync"/>
         public async Task<string> ReadLineAsync()
         {
-            return await Task.Run(() => GetStringFromQueue(StringRequest.CreateReadLineRequest()));
+            return await Task.Run(() => GetStringFromQueue(StringRequest.CreateReadLineRequest())).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="IStringProtocol.Read"/>
@@ -268,7 +266,7 @@ namespace Solid.Arduino.Firmata
             if (length < 0)
                 throw new ArgumentOutOfRangeException(nameof(length), Messages.ArgumentEx_PositiveValue);
 
-            return await Task.Run(() => GetStringFromQueue(StringRequest.CreateReadRequest(length)));
+            return await Task.Run(() => GetStringFromQueue(StringRequest.CreateReadRequest(length))).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="IStringProtocol.ReadTo"/>
@@ -280,7 +278,7 @@ namespace Solid.Arduino.Firmata
         /// <inheritdoc cref="IStringProtocol.ReadToAsync"/>
         public async Task<string> ReadToAsync(char terminator = char.MinValue)
         {
-            return await Task.Run(() => GetStringFromQueue(StringRequest.CreateReadRequest(terminator)));
+            return await Task.Run(() => GetStringFromQueue(StringRequest.CreateReadRequest(terminator))).ConfigureAwait(false);
         }
 
         #endregion
@@ -468,15 +466,14 @@ namespace Solid.Arduino.Firmata
         public Firmware GetFirmware()
         {
             RequestFirmware();
-            return (Firmware)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.FirmwareResponse))).Value;
+            return GetMessageFromQueue<Firmware>().Value;
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetFirmwareAsync"/>
         public async Task<Firmware> GetFirmwareAsync()
         {
             RequestFirmware();
-            return await Task.Run(() =>
-                (Firmware)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.FirmwareResponse))).Value);
+            return await Task.Run(() => GetMessageFromQueue<Firmware>().Value).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.RequestProtocolVersion"/>
@@ -489,15 +486,14 @@ namespace Solid.Arduino.Firmata
         public ProtocolVersion GetProtocolVersion()
         {
             RequestProtocolVersion();
-            return (ProtocolVersion)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.ProtocolVersion))).Value;
+            return GetMessageFromQueue<ProtocolVersion>().Value;
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetProtocolVersionAsync"/>
         public async Task<ProtocolVersion> GetProtocolVersionAsync()
         {
             RequestProtocolVersion();
-            return await Task.Run(() =>
-                (ProtocolVersion)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.ProtocolVersion))).Value);
+            return await Task.Run(() => GetMessageFromQueue<ProtocolVersion>().Value).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.RequestBoardCapability"/>
@@ -510,15 +506,14 @@ namespace Solid.Arduino.Firmata
         public BoardCapability GetBoardCapability()
         {
             RequestBoardCapability();
-            return (BoardCapability)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.CapabilityResponse))).Value;
+            return GetMessageFromQueue<BoardCapability>().Value;
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetBoardCapabilityAsync"/>
         public async Task<BoardCapability> GetBoardCapabilityAsync()
         {
             RequestBoardCapability();
-            return await Task.Run(() =>
-                (BoardCapability)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.CapabilityResponse))).Value);
+            return await Task.Run(() => GetMessageFromQueue<BoardCapability>().Value).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.RequestBoardAnalogMapping"/>
@@ -531,15 +526,14 @@ namespace Solid.Arduino.Firmata
         public BoardAnalogMapping GetBoardAnalogMapping()
         {
             RequestBoardAnalogMapping();
-            return (BoardAnalogMapping)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.AnalogMappingResponse))).Value;
+            return GetMessageFromQueue<BoardAnalogMapping>().Value;
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetBoardAnalogMappingAsync"/>
         public async Task<BoardAnalogMapping> GetBoardAnalogMappingAsync()
         {
             RequestBoardAnalogMapping();
-            return await Task.Run(() =>
-                (BoardAnalogMapping)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.AnalogMappingResponse))).Value);
+            return await Task.Run(() => GetMessageFromQueue<BoardAnalogMapping>().Value).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.RequestPinState"/>
@@ -562,18 +556,14 @@ namespace Solid.Arduino.Firmata
         public PinState GetPinState(int pinNumber)
         {
             RequestPinState(pinNumber);
-            return (PinState)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.PinStateResponse))).Value;
+            return GetMessageFromQueue<PinState>().Value;
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetPinStateAsync"/>
         public async Task<PinState> GetPinStateAsync(int pinNumber)
         {
             RequestPinState(pinNumber);
-            return await Task.Run
-            (
-                () =>
-                (PinState)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.PinStateResponse))).Value
-            );
+            return await Task.Run(() => GetMessageFromQueue<PinState>().Value).ConfigureAwait(false);
         }
 
         #endregion
@@ -672,19 +662,16 @@ namespace Solid.Arduino.Firmata
         public I2CReply GetI2CReply(int slaveAddress, int bytesToRead)
         {
             ReadI2COnce(slaveAddress, bytesToRead);
-            _awaitedMessagesQueue.Enqueue(new FirmataMessage(MessageType.I2CReply));
-
-            return (I2CReply)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.I2CReply))).Value;
+            
+            return GetMessageFromQueue<I2CReply>().Value;
         }
 
         /// <inheritdoc cref="II2CProtocol.GetI2CReplyAsync(int,int)"/>
         public async Task<I2CReply> GetI2CReplyAsync(int slaveAddress, int bytesToRead)
         {
             ReadI2COnce(slaveAddress, bytesToRead);
-            _awaitedMessagesQueue.Enqueue(new FirmataMessage(MessageType.I2CReply));
 
-            return await Task.Run(() =>
-                (I2CReply)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.I2CReply))).Value);
+            return await Task.Run(() => GetMessageFromQueue<I2CReply>().Value).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="II2CProtocol.ReadI2COnce(int,int,int)"/>
@@ -697,19 +684,14 @@ namespace Solid.Arduino.Firmata
         public I2CReply GetI2CReply(int slaveAddress, int slaveRegister, int bytesToRead)
         {
             ReadI2COnce(slaveAddress, slaveRegister, bytesToRead);
-            _awaitedMessagesQueue.Enqueue(new FirmataMessage(MessageType.I2CReply));
-
-            return (I2CReply)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.I2CReply))).Value;
+            return GetMessageFromQueue<I2CReply>().Value;
         }
 
         /// <inheritdoc cref="II2CProtocol.GetI2CReplyAsync(int,int,int)"/>
         public async Task<I2CReply> GetI2CReplyAsync(int slaveAddress, int slaveRegister, int bytesToRead)
         {
             ReadI2COnce(slaveAddress, slaveRegister, bytesToRead);
-            _awaitedMessagesQueue.Enqueue(new FirmataMessage(MessageType.I2CReply));
-
-            return await Task.Run(() =>
-                (I2CReply)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.I2CReply))).Value);
+            return await Task.Run(() => GetMessageFromQueue<I2CReply>().Value).ConfigureAwait(false);
         }
 
         /// <inheritdoc cref="II2CProtocol.ReadI2CContinuous(int,int)"/>
@@ -748,22 +730,17 @@ namespace Solid.Arduino.Firmata
 
         public SysEx SendSysExWithReply(SysEx message, Func<SysEx, bool> replyCheck)
         {
+            if (replyCheck == null)
+                throw new ArgumentNullException(nameof(replyCheck));
+
             SendSysEx(message);
-            Func<FirmataMessage, bool> check = firmataMessage =>
-            {
-                if (firmataMessage.IsSysEx)
-                    return replyCheck((SysEx) firmataMessage.Value);
 
-                return false;
-            };
+            bool CheckIfMessageMatches(IFirmataMessage firmataMessage) => (firmataMessage is FirmataMessage<SysEx> sysExMessage) && replyCheck(sysExMessage.Value);
 
-            var reply = WaitForMessageFromQueue(check, _messageTimeout);
-            if (reply != null)
-            {
-                
-            }
+            if (WaitForMessageFromQueue(CheckIfMessageMatches, _messageTimeout) is FirmataMessage<SysEx> reply)
+                return reply.Value;
 
-            return new SysEx();
+            throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, typeof(SysEx).Name));
         }
 
         public Task<SysEx> SendSysExWithReplyAsync(SysEx message, Func<SysEx, bool> replyCheck)
@@ -818,7 +795,7 @@ namespace Solid.Arduino.Firmata
 
         #region Private Methods
 
-        private void WriteMessageByte(int dataByte)
+        private void AddToMessageBuffer(int dataByte)
         {
             if (_messageBufferIndex == BufferSize)
                 throw new OverflowException(Messages.OverflowEx_CmdBufferFull);
@@ -859,58 +836,17 @@ namespace Solid.Arduino.Firmata
             }
         }
 
-        private FirmataMessage GetMessageFromQueue(FirmataMessage awaitedMessage)
+        private FirmataMessage<T> GetMessageFromQueue<T>()
+        where T : struct
         {
-            var message = WaitForMessageFromQueue(firmataMessage => firmataMessage.Type == awaitedMessage.Type, _messageTimeout);
-            if (message != null)
-                return message;
+            var message = WaitForMessageFromQueue(firmataMessage => firmataMessage.GetType() == typeof(FirmataMessage<T>), _messageTimeout);
+            if (message is FirmataMessage<T> result)
+                return result;
 
-            throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, awaitedMessage.Type));
-
-            /*
-            _awaitedMessagesQueue.Enqueue(awaitedMessage);
-            bool lockTaken = false;
-
-            try
-            {
-                Monitor.TryEnter(_receivedMessageList, _messageTimeout, ref lockTaken);
-
-                while (lockTaken)
-                {
-                    if (_receivedMessageList.Count > 0)
-                    {
-                        var message = (from firmataMessage in _receivedMessageList
-                                       where firmataMessage.Type == awaitedMessage.Type
-                                       select firmataMessage).FirstOrDefault();
-                        if (message != null)
-                        {
-                            //if (_receivedMessageQueue.Count > 0
-                            //    && _receivedMessageQueue.Select( fm => fm.Type == awaitedMessage.Type).First()) // .Find(FirmataMessage =>) .First().Type == awaitedMessage.Type)
-                            //{
-                            //FirmataMessage message = _receivedMessageQueue.First.Value;
-                            //_receivedMessageQueue.RemoveFirst();
-                            _receivedMessageList.Remove(message);
-                            Monitor.PulseAll(_receivedMessageList);
-                            return message;
-                        }
-                    }
-
-                    lockTaken = Monitor.Wait(_receivedMessageList, _messageTimeout);
-                }
-
-                throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, awaitedMessage.Type));
-            }
-            finally
-            {
-                if (lockTaken)
-                {
-                    Monitor.Exit(_receivedMessageList);
-                }
-            }
-            */
+            throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, typeof(T).Name));
         }
 
-        private FirmataMessage WaitForMessageFromQueue(Func<FirmataMessage, bool> messagePredicate, int timeOutInMs)
+        private IFirmataMessage WaitForMessageFromQueue(Func<IFirmataMessage, bool> messagePredicate, int timeOutInMs)
         {
             bool lockTaken = false;
 
@@ -1028,12 +964,12 @@ namespace Solid.Arduino.Firmata
                                 Debug.Write(string.Format("{0:x2} ", serialByte));
                 #endif
                 */
-                if (_processMessage != null)
+                if (_processMessageFunction != null)
                 {
-                    _processMessage(serialByte);
+                    _processMessageFunction(serialByte);
                     /*
                     #if DEBUG
-                                      if (_processMessage == null)
+                                      if (_processMessageFunction == null)
                                         Debug.WriteLine(string.Empty);
                     #endif
                     */
@@ -1138,11 +1074,11 @@ namespace Solid.Arduino.Firmata
             switch (header)
             {
                 case MessageHeader.AnalogState:
-                    _processMessage = ProcessAnalogStateMessage;
+                    _processMessageFunction = ProcessAnalogStateMessage;
                     break;
 
                 case MessageHeader.DigitalState:
-                    _processMessage = ProcessDigitalStateMessage;
+                    _processMessageFunction = ProcessDigitalStateMessage;
                     break;
 
                 case MessageHeader.SystemExtension:
@@ -1151,11 +1087,11 @@ namespace Solid.Arduino.Firmata
                     switch (header)
                     {
                         case MessageHeader.SystemExtension:
-                            _processMessage = ProcessSysExMessage;
+                            _processMessageFunction = ProcessSysExMessage;
                             break;
 
                         case MessageHeader.ProtocolVersion:
-                            _processMessage = ProcessProtocolVersionMessage;
+                            _processMessageFunction = ProcessProtocolVersionMessage;
                             break;
 
                         //case MessageHeader.SetPinMode:
@@ -1188,7 +1124,7 @@ namespace Solid.Arduino.Firmata
         {
             if (_messageBufferIndex < 2)
             {
-                WriteMessageByte(messageByte);
+                AddToMessageBuffer(messageByte);
             }
             else
             {
@@ -1197,13 +1133,11 @@ namespace Solid.Arduino.Firmata
                     Channel = _messageBuffer[0] & 0x0F,
                     Level = (_messageBuffer[1] | (messageByte << 7))
                 };
-                _processMessage = null;
+                _processMessageFunction = null;
 
-                if (MessageReceived != null)
-                    MessageReceived(this, new FirmataMessageEventArgs(new FirmataMessage(currentState, MessageType.AnalogState)));
+                MessageReceived?.Invoke(this, new FirmataMessageEventArgs(new FirmataMessage<AnalogState>(currentState)));
 
-                if (AnalogStateReceived != null)
-                    AnalogStateReceived(this, new FirmataEventArgs<AnalogState>(currentState));
+                AnalogStateReceived?.Invoke(this, new FirmataEventArgs<AnalogState>(currentState));
             }
         }
 
@@ -1211,7 +1145,7 @@ namespace Solid.Arduino.Firmata
         {
             if (_messageBufferIndex < 2)
             {
-                WriteMessageByte(messageByte);
+                AddToMessageBuffer(messageByte);
             }
             else
             {
@@ -1220,13 +1154,11 @@ namespace Solid.Arduino.Firmata
                     Port = _messageBuffer[0] & 0x0F,
                     Pins = _messageBuffer[1] | (messageByte << 7)
                 };
-                _processMessage = null;
+                _processMessageFunction = null;
 
-                if (MessageReceived != null)
-                    MessageReceived(this, new FirmataMessageEventArgs(new FirmataMessage(currentState, MessageType.DigitalPortState)));
+                MessageReceived?.Invoke(this, new FirmataMessageEventArgs(new FirmataMessage<DigitalPortState>(currentState)));
 
-                if (DigitalStateReceived != null)
-                    DigitalStateReceived(this, new FirmataEventArgs<DigitalPortState>(currentState));
+                DigitalStateReceived?.Invoke(this, new FirmataEventArgs<DigitalPortState>(currentState));
             }
         }
 
@@ -1234,16 +1166,15 @@ namespace Solid.Arduino.Firmata
         {
             if (_messageBufferIndex < 2)
             {
-                WriteMessageByte(messageByte);
+                AddToMessageBuffer(messageByte);
             }
             else
             {
-                var version = new ProtocolVersion
+                DeliverMessage(new FirmataMessage<ProtocolVersion>(new ProtocolVersion
                 {
                     Major = _messageBuffer[1],
                     Minor = messageByte
-                };
-                DeliverMessage(new FirmataMessage(version, MessageType.ProtocolVersion));
+                }));
             }
         }
 
@@ -1251,7 +1182,7 @@ namespace Solid.Arduino.Firmata
         {
             if (messageByte != SysExEnd)
             {
-                WriteMessageByte(messageByte);
+                AddToMessageBuffer(messageByte);
                 return;
             }
 
@@ -1293,9 +1224,9 @@ namespace Solid.Arduino.Firmata
             }
         }
 
-        private void DeliverMessage(FirmataMessage message)
+        private void DeliverMessage(IFirmataMessage message)
         {
-            _processMessage = null;
+            _processMessageFunction = null;
 
             lock (_receivedMessageList)
             {
@@ -1313,11 +1244,11 @@ namespace Solid.Arduino.Firmata
                 Monitor.PulseAll(_receivedMessageList);
             }
 
-            if (MessageReceived != null && message.Type != MessageType.I2CReply)
-                MessageReceived(this, new FirmataMessageEventArgs(message));
+            if (message.GetType() != typeof(FirmataMessage<I2CReply>))
+                MessageReceived?.Invoke(this, new FirmataMessageEventArgs(message));
         }
 
-        private FirmataMessage CreateI2CReply()
+        private FirmataMessage<I2CReply> CreateI2CReply()
         {
             var reply = new I2CReply
             {
@@ -1334,13 +1265,12 @@ namespace Solid.Arduino.Firmata
 
             reply.Data = data;
 
-            if (I2CReplyReceived != null)
-                I2CReplyReceived(this, new I2CEventArgs(reply));
+            I2CReplyReceived?.Invoke(this, new I2CEventArgs(reply));
 
-            return new FirmataMessage(reply, MessageType.I2CReply);
+            return new FirmataMessage<I2CReply>(reply);
         }
 
-        private FirmataMessage CreatePinStateResponse()
+        private FirmataMessage<PinState> CreatePinStateResponse()
         {
             if (_messageBufferIndex < 5)
                 throw new InvalidOperationException(Messages.InvalidOpEx_PinNotSupported);
@@ -1348,20 +1278,17 @@ namespace Solid.Arduino.Firmata
             int value = 0;
 
             for (int x = _messageBufferIndex - 1; x > 3; x--)
-            {
                 value = (value << 7) | _messageBuffer[x];
-            }
 
-            var pinState = new PinState
+            return new FirmataMessage<PinState>(new PinState
             {
                 PinNumber = _messageBuffer[2],
                 Mode = (PinMode)_messageBuffer[3],
                 Value = value
-            };
-            return new FirmataMessage(pinState, MessageType.PinStateResponse);
+            });
         }
 
-        private FirmataMessage CreateAnalogMappingResponse()
+        private FirmataMessage<BoardAnalogMapping> CreateAnalogMappingResponse()
         {
             var pins = new List<AnalogPinMapping>(8);
 
@@ -1380,11 +1307,10 @@ namespace Solid.Arduino.Firmata
                 }
             }
 
-            var board = new BoardAnalogMapping { PinMappings = pins.ToArray() };
-            return new FirmataMessage(board, MessageType.AnalogMappingResponse);
+            return new FirmataMessage<BoardAnalogMapping>(new BoardAnalogMapping { PinMappings = pins.ToArray() });
         }
 
-        private FirmataMessage CreateCapabilityResponse()
+        private FirmataMessage<BoardCapability> CreateCapabilityResponse()
         {
             var pins = new List<PinCapability>(12);
             int pinIndex = 0;
@@ -1465,10 +1391,10 @@ namespace Solid.Arduino.Firmata
                 x++;
             }
 
-            return new FirmataMessage(new BoardCapability { Pins = pins.ToArray() }, MessageType.CapabilityResponse);
+            return new FirmataMessage<BoardCapability>(new BoardCapability { Pins = pins.ToArray() });
         }
 
-        private FirmataMessage CreateStringDataMessage()
+        private FirmataMessage<StringData> CreateStringDataMessage()
         {
             var builder = new StringBuilder(_messageBufferIndex >> 1);
 
@@ -1477,47 +1403,37 @@ namespace Solid.Arduino.Firmata
                 builder.Append((char)(_messageBuffer[x] | (_messageBuffer[x + 1] << 7)));
             }
 
-            var stringData = new StringData
+            return new FirmataMessage<StringData>(new StringData
             {
                 Text = builder.ToString()
-            };
-
-            return new FirmataMessage(stringData, MessageType.StringData);
+            });
         }
 
-        private FirmataMessage CreateFirmwareResponse()
+        private FirmataMessage<Firmware> CreateFirmwareResponse()
         {
-            var firmware = new Firmware
-            {
-                MajorVersion = _messageBuffer[2],
-                MinorVersion = _messageBuffer[3]
-            };
-
             var builder = new StringBuilder(_messageBufferIndex);
 
             for (int x = 4; x < _messageBufferIndex; x += 2)
-            {
                 builder.Append((char)(_messageBuffer[x] | (_messageBuffer[x + 1] << 7)));
-            }
 
-            firmware.Name = builder.ToString();
-            return new FirmataMessage(firmware, MessageType.FirmwareResponse);
+            return new FirmataMessage<Firmware>(new Firmware
+            {
+                MajorVersion = _messageBuffer[2],
+                MinorVersion = _messageBuffer[3],
+                Name = builder.ToString()
+            });
         }
 
 
-        private FirmataMessage CreateUserDefinedSysExMessage()
+        private FirmataMessage<SysEx> CreateUserDefinedSysExMessage()
         {
-            var userDefinedSysEx = new SysEx
-            {
-                Command = (byte)_messageBuffer[1],
-                Payload = new byte[(_messageBufferIndex - 2) / 2]
-            };
+            var payload = new byte[_messageBufferIndex - 2];
+            for (var i = 2; i < _messageBufferIndex; i++)
+                payload[i - 2] = (byte)_messageBuffer[i];
+            // TODO: make _messageBuffer byte[] instead of int[]
+            //Array.Copy(_messageBuffer, 2, payload, 0, payload.Length);
 
-
-            for (var x = 0; x < userDefinedSysEx.Payload.Length; x++)
-                userDefinedSysEx.Payload[x] = (byte)(_messageBuffer[x * 2 + 2] | _messageBuffer[x * 2 + 3] << 7);
-
-            return new FirmataMessage(userDefinedSysEx, MessageType.UserDefinedSysEx);
+            return new FirmataMessage<SysEx>(new SysEx((byte)_messageBuffer[1], payload));
         }
 
         #endregion

@@ -104,10 +104,10 @@ namespace Solid.Arduino.Core.Run
         {
             string o;
 
-            switch (eventArgs.Value.Type)
+            switch (eventArgs.Value)
             {
-                case MessageType.StringData:
-                    o = ((StringData)eventArgs.Value.Value).Text;
+                case FirmataMessage<StringData> stringDataMessage:
+                    o = stringDataMessage.Value.Text;
                     break;
 
                 default:
@@ -115,7 +115,7 @@ namespace Solid.Arduino.Core.Run
                     break;
             }
 
-            Console.WriteLine("Message {0} received: {1}", eventArgs.Value.Type, o);
+            Console.WriteLine("Message {0} received: {1}", eventArgs.Value.GetType().Name, o);
         }
 
         static void SimpelTest(IDataConnection connection)

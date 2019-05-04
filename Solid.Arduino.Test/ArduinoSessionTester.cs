@@ -13,7 +13,7 @@ namespace Solid.Arduino.Test
     public class ArduinoSessionTester
     {
 
-        private readonly Queue<FirmataMessage> _messagesReceived = new Queue<FirmataMessage>();
+        private readonly Queue<IFirmataMessage> _messagesReceived = new Queue<IFirmataMessage>();
 
         [TestMethod]
         public void CreateSessionWithClosedConnection()

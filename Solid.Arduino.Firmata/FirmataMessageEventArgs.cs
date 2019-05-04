@@ -8,17 +8,14 @@ namespace Solid.Arduino.Firmata
     /// <see cref="MessageReceivedHandler"/>
     public class FirmataMessageEventArgs : EventArgs
     {
-
-        private readonly FirmataMessage _value;
-
-        internal FirmataMessageEventArgs(FirmataMessage value)
+        internal FirmataMessageEventArgs(IFirmataMessage value)
         {
-            _value = value;
+            Value = value;
         }
 
         /// <summary>
         /// Gets the received message.
         /// </summary>
-        public FirmataMessage Value { get { return _value; } }
+        public IFirmataMessage Value { get; }
     }
 }
