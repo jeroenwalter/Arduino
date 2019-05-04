@@ -7,15 +7,11 @@ namespace Solid.Arduino.Firmata
     /// </summary>
     public class FirmataMessage
     {
-        private readonly MessageType _type;
-        private readonly ValueType _value;
-        private readonly DateTime _time;
-
         /// <summary>
         /// Initializes a new <see cref="FirmataMessage"/> instance.
         /// </summary>
         /// <param name="type">The type of message to be created.</param>
-        internal FirmataMessage(MessageType type): this (null, type, DateTime.UtcNow)
+        internal FirmataMessage(MessageType type) : this(null, type, DateTime.UtcNow)
         {
         }
 
@@ -24,7 +20,7 @@ namespace Solid.Arduino.Firmata
         /// </summary>
         /// <param name="value"></param>
         /// <param name="type"></param>
-        internal FirmataMessage(ValueType value, MessageType type): this (value, type, DateTime.UtcNow)
+        internal FirmataMessage(ValueType value, MessageType type) : this(value, type, DateTime.UtcNow)
         {
         }
 
@@ -36,25 +32,33 @@ namespace Solid.Arduino.Firmata
         /// <param name="time"></param>
         internal FirmataMessage(ValueType value, MessageType type, DateTime time)
         {
-            _value = value;
-            _type = type;
-            _time = time;
+            Value = value;
+            Type = type;
+            Time = time;
         }
 
         /// <summary>
         /// Gets the specific value delivered by the message.
         /// </summary>
-        public ValueType Value { get { return _value; } }
+        public ValueType Value { get; }
 
         /// <summary>
         /// Gets the type enumeration of the message.
         /// </summary>
-        public MessageType Type { get { return _type; } }
+        public MessageType Type { get; }
 
         /// <summary>
         /// Gets the time of the delivered message.
         /// </summary>
-        public DateTime Time { get { return _time; } }
+        public DateTime Time { get; }
+
+        public bool IsSysEx => Type == MessageType.FirmwareResponse
+                            || Type == MessageType.CapabilityResponse
+                            || Type == MessageType.AnalogMappingResponse 
+                            || Type == MessageType.PinStateResponse
+                            || Type == MessageType.StringData
+                            || Type == MessageType.I2CReply
+                            || Type == MessageType.UserDefinedSysEx;
     }
 
     /// <summary>
@@ -71,6 +75,6 @@ namespace Solid.Arduino.Firmata
         PinStateResponse,
         StringData,
         I2CReply,
-        CustomSysEx
+        UserDefinedSysEx
     }
 }

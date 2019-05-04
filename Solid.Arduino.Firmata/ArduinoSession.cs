@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -11,49 +12,49 @@ using Solid.Arduino.Firmata.Servo;
 
 namespace Solid.Arduino.Firmata
 {
-  /// <summary>
-  /// Represents an active layer for serial communication with an Arduino board.
-  /// </summary>
-  /// <remarks>
-  /// This class supports a few common protocols used for communicating with Arduino boards.
-  /// The protocols can be used simultaneous and independently of each other.
-  /// </remarks>
-  /// <seealso href="http://arduino.cc">Official Arduino website</seealso>
-  /// <seealso href="https://github.com/SolidSoils/Arduino">SolidSoils4Arduino project on GitHub</seealso>
-  /// <example>
-  /// <code language="C#">
-  /// var connection = new SerialConnection("COM3", SerialBaudRate.Bps_57600);
-  /// var session = new ArduinoSession(connection, timeOut: 250);
-  /// // Cast to interface done, just for the sake of this demo.
-  /// IFirmataProtocol firmata = (IFirmataProtocol)session;
-  ///
-  /// Firmware firm = firmata.GetFirmware();
-  /// Console.WriteLine("Firmware: {0} {1}.{2}", firm.Name, firm.MajorVersion, firm.MinorVersion);
-  ///
-  /// ProtocolVersion version = firmata.GetProtocolVersion();
-  /// Console.WriteLine("Protocol version: {0}.{1}", version.Major, version.Minor);
-  ///
-  /// BoardCapability caps = firmata.GetBoardCapability();
-  /// Console.WriteLine("Board Capabilities:");
-  ///
-  /// foreach (var pincap in caps.PinCapabilities)
-  /// {
-  ///    Console.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}",
-  ///        pincap.PinNumber,
-  ///        pincap.DigitalInput,
-  ///        pincap.DigitalOutput,
-  ///        pincap.Analog,
-  ///        pincap.AnalogResolution,
-  ///        pincap.Pwm,
-  ///        pincap.PwmResolution,
-  ///        pincap.Servo,
-  ///        pincap.ServoResolution);
-  /// }
-  /// Console.WriteLine();
-  /// Console.ReadLine();
-  /// </code>
-  /// </example>
-  public class ArduinoSession : IFirmataProtocol, IServoProtocol, II2CProtocol, IStringProtocol, IDisposable
+    /// <summary>
+    /// Represents an active layer for serial communication with an Arduino board.
+    /// </summary>
+    /// <remarks>
+    /// This class supports a few common protocols used for communicating with Arduino boards.
+    /// The protocols can be used simultaneous and independently of each other.
+    /// </remarks>
+    /// <seealso href="http://arduino.cc">Official Arduino website</seealso>
+    /// <seealso href="https://github.com/SolidSoils/Arduino">SolidSoils4Arduino project on GitHub</seealso>
+    /// <example>
+    /// <code language="C#">
+    /// var connection = new SerialConnection("COM3", SerialBaudRate.Bps_57600);
+    /// var session = new ArduinoSession(connection, timeOut: 250);
+    /// // Cast to interface done, just for the sake of this demo.
+    /// IFirmataProtocol firmata = (IFirmataProtocol)session;
+    ///
+    /// Firmware firm = firmata.GetFirmware();
+    /// Console.WriteLine("Firmware: {0} {1}.{2}", firm.Name, firm.MajorVersion, firm.MinorVersion);
+    ///
+    /// ProtocolVersion version = firmata.GetProtocolVersion();
+    /// Console.WriteLine("Protocol version: {0}.{1}", version.Major, version.Minor);
+    ///
+    /// BoardCapability caps = firmata.GetBoardCapability();
+    /// Console.WriteLine("Board Capabilities:");
+    ///
+    /// foreach (var pincap in caps.PinCapabilities)
+    /// {
+    ///    Console.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}",
+    ///        pincap.PinNumber,
+    ///        pincap.DigitalInput,
+    ///        pincap.DigitalOutput,
+    ///        pincap.Analog,
+    ///        pincap.AnalogResolution,
+    ///        pincap.Pwm,
+    ///        pincap.PwmResolution,
+    ///        pincap.Servo,
+    ///        pincap.ServoResolution);
+    /// }
+    /// Console.WriteLine();
+    /// Console.ReadLine();
+    /// </code>
+    /// </example>
+    public class ArduinoSession : IFirmataProtocol, IServoProtocol, II2CProtocol, IStringProtocol, IDisposable
     {
         #region Type declarations
 
@@ -67,7 +68,8 @@ namespace Solid.Arduino.Firmata
             ProtocolVersion = 0xF9
         }
 
-        private enum StringReadMode {
+        private enum StringReadMode
+        {
             ReadLine,
             ReadToTerminator,
             ReadBlock
@@ -75,10 +77,6 @@ namespace Solid.Arduino.Firmata
 
         private class StringRequest
         {
-            private readonly StringReadMode _mode;
-            private readonly int _blockLength;
-            private readonly char _terminator;
-
             public static StringRequest CreateReadLineRequest()
             {
                 return new StringRequest(StringReadMode.ReadLine, '\\', 0);
@@ -96,14 +94,14 @@ namespace Solid.Arduino.Firmata
 
             private StringRequest(StringReadMode mode, char terminator, int blockLength)
             {
-                _mode = mode;
-                _blockLength = blockLength;
-                _terminator = terminator;
+                Mode = mode;
+                BlockLength = blockLength;
+                Terminator = terminator;
             }
 
-            public char Terminator { get { return _terminator; } }
-            public int BlockLength { get { return _blockLength; } }
-            public StringReadMode Mode { get { return _mode; } }
+            public char Terminator { get; }
+            public int BlockLength { get; }
+            public StringReadMode Mode { get; }
         }
 
         #endregion
@@ -116,8 +114,8 @@ namespace Solid.Arduino.Firmata
         private const byte SysExStart = 0xF0;
         private const byte SysExEnd = 0xF7;
 
-        private const int Buffersize = 2048;
-        private const int MaxQueuelength = 100;
+        private const int BufferSize = 2048;
+        private const int MaxQueueLength = 100;
 
         private readonly bool _gotOpenConnection;
         private readonly LinkedList<FirmataMessage> _receivedMessageList = new LinkedList<FirmataMessage>();
@@ -129,8 +127,8 @@ namespace Solid.Arduino.Firmata
         private int _messageTimeout = -1;
         private ProcessMessageHandler _processMessage;
         private int _messageBufferIndex, _stringBufferIndex;
-        private readonly int[] _messageBuffer = new int[Buffersize];
-        private readonly char[] _stringBuffer = new char[Buffersize];
+        private readonly int[] _messageBuffer = new int[BufferSize];
+        private readonly char[] _stringBuffer = new char[BufferSize];
 
         #endregion
 
@@ -143,10 +141,7 @@ namespace Solid.Arduino.Firmata
         /// <exception cref="System.ArgumentNullException">connection</exception>
         public ArduinoSession(IDataConnection connection)
         {
-            if (connection == null)
-                throw new ArgumentNullException(nameof(connection));
-
-            Connection = connection;
+            Connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _gotOpenConnection = connection.IsOpen;
 
             if (!connection.IsOpen)
@@ -185,7 +180,7 @@ namespace Solid.Arduino.Firmata
         /// </remarks>
         public int TimeOut
         {
-            get { return _messageTimeout; }
+            get => _messageTimeout;
             set
             {
                 if (value < Connection.InfiniteTimeout)
@@ -229,8 +224,8 @@ namespace Solid.Arduino.Firmata
         /// </remarks>
         public string NewLine
         {
-            get { return Connection.NewLine; }
-            set { Connection.NewLine = value; }
+            get => Connection.NewLine;
+            set => Connection.NewLine = value;
         }
 
         /// <inheritdoc cref="IStringProtocol.Write"/>
@@ -332,7 +327,7 @@ namespace Solid.Arduino.Firmata
         /// <inheritdoc cref="IFirmataProtocol.ResetBoard"/>
         public void ResetBoard()
         {
-            Connection.Write(new [] { (byte)0xFF }, 0, 1);
+            Connection.Write(new[] { (byte)0xFF }, 0, 1);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.SetDigitalPin(int,long)"/>
@@ -515,7 +510,7 @@ namespace Solid.Arduino.Firmata
         public BoardCapability GetBoardCapability()
         {
             RequestBoardCapability();
-            return (BoardCapability)((FirmataMessage) GetMessageFromQueue(new FirmataMessage(MessageType.CapabilityResponse))).Value;
+            return (BoardCapability)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.CapabilityResponse))).Value;
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetBoardCapabilityAsync"/>
@@ -633,7 +628,7 @@ namespace Solid.Arduino.Firmata
             if (microseconds < 0 || microseconds > 0x3FFF)
                 throw new ArgumentOutOfRangeException(nameof(microseconds), Messages.ArgumentEx_I2cInterval);
 
-            var command = new []
+            var command = new[]
             {
                 SysExStart,
                 (byte)0x78,
@@ -750,6 +745,61 @@ namespace Solid.Arduino.Firmata
             Connection.Write(command, 0, command.Length);
         }
 
+
+        public SysEx SendSysExWithReply(SysEx message, Func<SysEx, bool> replyCheck)
+        {
+            SendSysEx(message);
+            Func<FirmataMessage, bool> check = firmataMessage =>
+            {
+                if (firmataMessage.IsSysEx)
+                    return replyCheck((SysEx) firmataMessage.Value);
+
+                return false;
+            };
+
+            var reply = WaitForMessageFromQueue(check, _messageTimeout);
+            if (reply != null)
+            {
+                
+            }
+
+            return new SysEx();
+        }
+
+        public Task<SysEx> SendSysExWithReplyAsync(SysEx message, Func<SysEx, bool> replyCheck)
+        {
+            SendSysEx(message);
+
+            //_awaitedMessagesQueue.Enqueue(new FirmataMessage(MessageType.UserDefinedSysEx));
+
+            //return await Task.Run(() =>
+            //    (I2CReply)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.I2CReply))).Value);
+
+            throw new NotImplementedException();
+        }
+
+        private void SendSysEx(byte command, byte[] payload)
+        {
+            if (payload == null || payload.Length == 0)
+            {
+                SendSysExCommand(command);
+                return;
+            }
+
+            var message = new byte[3 + payload.Length];
+            message[0] = SysExStart;
+            message[1] = command;
+            Array.Copy(payload, 0, message, 2, payload.Length);
+            message[message.Length - 1] = SysExEnd;
+
+            Connection.Write(message, 0, message.Length);
+        }
+
+        public void SendSysEx(SysEx message)
+        {
+            SendSysEx(message.Command, message.Payload);
+        }
+
         #endregion
 
         #region IDisposable
@@ -770,7 +820,7 @@ namespace Solid.Arduino.Firmata
 
         private void WriteMessageByte(int dataByte)
         {
-            if (_messageBufferIndex == Buffersize)
+            if (_messageBufferIndex == BufferSize)
                 throw new OverflowException(Messages.OverflowEx_CmdBufferFull);
 
             _messageBuffer[_messageBufferIndex] = dataByte;
@@ -809,8 +859,15 @@ namespace Solid.Arduino.Firmata
             }
         }
 
-        private object GetMessageFromQueue(FirmataMessage awaitedMessage)
+        private FirmataMessage GetMessageFromQueue(FirmataMessage awaitedMessage)
         {
+            var message = WaitForMessageFromQueue(firmataMessage => firmataMessage.Type == awaitedMessage.Type, _messageTimeout);
+            if (message != null)
+                return message;
+
+            throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, awaitedMessage.Type));
+
+            /*
             _awaitedMessagesQueue.Enqueue(awaitedMessage);
             bool lockTaken = false;
 
@@ -823,8 +880,8 @@ namespace Solid.Arduino.Firmata
                     if (_receivedMessageList.Count > 0)
                     {
                         var message = (from firmataMessage in _receivedMessageList
-                            where firmataMessage.Type == awaitedMessage.Type
-                            select firmataMessage).FirstOrDefault();
+                                       where firmataMessage.Type == awaitedMessage.Type
+                                       select firmataMessage).FirstOrDefault();
                         if (message != null)
                         {
                             //if (_receivedMessageQueue.Count > 0
@@ -842,6 +899,45 @@ namespace Solid.Arduino.Firmata
                 }
 
                 throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, awaitedMessage.Type));
+            }
+            finally
+            {
+                if (lockTaken)
+                {
+                    Monitor.Exit(_receivedMessageList);
+                }
+            }
+            */
+        }
+
+        private FirmataMessage WaitForMessageFromQueue(Func<FirmataMessage, bool> messagePredicate, int timeOutInMs)
+        {
+            bool lockTaken = false;
+
+            try
+            {
+                Monitor.TryEnter(_receivedMessageList, timeOutInMs, ref lockTaken);
+
+                while (lockTaken)
+                {
+                    if (_receivedMessageList.Count > 0)
+                    {
+                        var message = (from firmataMessage in _receivedMessageList
+                                       where messagePredicate(firmataMessage)
+                                       select firmataMessage).FirstOrDefault();
+
+                        if (message != null)
+                        {
+                            _receivedMessageList.Remove(message);
+                            Monitor.PulseAll(_receivedMessageList);
+                            return message;
+                        }
+                    }
+
+                    lockTaken = Monitor.Wait(_receivedMessageList, timeOutInMs);
+                }
+
+                return null;
             }
             finally
             {
@@ -914,34 +1010,34 @@ namespace Solid.Arduino.Firmata
 
                 try
                 {
-                  serialByte = Connection.ReadByte();
+                    serialByte = Connection.ReadByte();
                 }
                 catch (Exception exception)
                 {
-                  // Connection is closed while entering this loop.
-                  // This happens when disposing of the ArduinoSession while still receiving data.
-                  Debug.WriteLine(exception);
-                  return;
+                    // Connection is closed while entering this loop.
+                    // This happens when disposing of the ArduinoSession while still receiving data.
+                    Debug.WriteLine(exception);
+                    return;
                 }
-         
-/*
-#if DEBUG
-                if (_messageBufferIndex > 0 && _messageBufferIndex % 8 == 0)
-                    Debug.WriteLine(string.Empty);
 
-                Debug.Write(string.Format("{0:x2} ", serialByte));
-#endif
-*/
+                /*
+                #if DEBUG
+                                if (_messageBufferIndex > 0 && _messageBufferIndex % 8 == 0)
+                                    Debug.WriteLine(string.Empty);
+
+                                Debug.Write(string.Format("{0:x2} ", serialByte));
+                #endif
+                */
                 if (_processMessage != null)
                 {
                     _processMessage(serialByte);
-/*
-#if DEBUG
-                  if (_processMessage == null)
-                    Debug.WriteLine(string.Empty);
-#endif
-*/
-        }
+                    /*
+                    #if DEBUG
+                                      if (_processMessage == null)
+                                        Debug.WriteLine(string.Empty);
+                    #endif
+                    */
+                }
                 else
                 {
                     if ((serialByte & 0x80) != 0)
@@ -960,7 +1056,7 @@ namespace Solid.Arduino.Firmata
 
         private void ProcessAsciiString(int serialByte)
         {
-            if (_stringBufferIndex == Buffersize)
+            if (_stringBufferIndex == BufferSize)
                 throw new OverflowException(Messages.OverflowEx_StringBufferFull);
 
             char c = Convert.ToChar(serialByte);
@@ -1018,7 +1114,7 @@ namespace Solid.Arduino.Firmata
                 if (!lockTaken)
                     throw new TimeoutException();
 
-                if (_receivedStringQueue.Count >= MaxQueuelength)
+                if (_receivedStringQueue.Count >= MaxQueueLength)
                     throw new OverflowException(Messages.OverflowEx_StringBufferFull);
 
                 _receivedStringQueue.Enqueue(value);
@@ -1067,7 +1163,7 @@ namespace Solid.Arduino.Firmata
                         default:
                             // 0xF? command not supported.
                             //throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
-                            
+
                             // Stream is most likely out of sync or the baudrate is incorrect.
                             // Don't throw an exception here, as we're in the middle of handling an event and
                             // have no way of catching an exception, other than a global unhandled exception handler.
@@ -1077,14 +1173,14 @@ namespace Solid.Arduino.Firmata
                     break;
 
                 default:
-                  // Command not supported.
-                  //throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
+                    // Command not supported.
+                    //throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
 
-                  // Stream is most likely out of sync or the baudrate is incorrect.
-                  // Don't throw an exception here, as we're in the middle of handling an event from the serial port and
-                  // have no way of catching an exception, other than a global unhandled exception handler.
-                  // Just skip these bytes, until sync is found when a new message starts.
-                  return;
+                    // Stream is most likely out of sync or the baudrate is incorrect.
+                    // Don't throw an exception here, as we're in the middle of handling an event from the serial port and
+                    // have no way of catching an exception, other than a global unhandled exception handler.
+                    // Just skip these bytes, until sync is found when a new message starts.
+                    return;
             }
         }
 
@@ -1159,6 +1255,8 @@ namespace Solid.Arduino.Firmata
                 return;
             }
 
+            // Check if someone is waiting for this message.
+
             switch (_messageBuffer[1])
             {
                 case 0x6A: // AnalogMappingResponse
@@ -1185,9 +1283,13 @@ namespace Solid.Arduino.Firmata
                     DeliverMessage(CreateFirmwareResponse());
                     return;
 
-                default: // Unknown or unsupported message
-                    DeliverMessage(CreateCustomSysExMessage());
+                case int n when (n >= 0x01 && n <= 0x0F): // User-defined command
+                    DeliverMessage(CreateUserDefinedSysExMessage());
                     return;
+
+                default: // Unknown or unsupported message
+                    throw new NotImplementedException();
+
             }
         }
 
@@ -1197,7 +1299,7 @@ namespace Solid.Arduino.Firmata
 
             lock (_receivedMessageList)
             {
-                if (_receivedMessageList.Count >= MaxQueuelength)
+                if (_receivedMessageList.Count >= MaxQueueLength)
                     throw new OverflowException(Messages.OverflowEx_MsgBufferFull);
 
                 // Remove all unprocessed and timed-out messages.
@@ -1229,7 +1331,7 @@ namespace Solid.Arduino.Firmata
             {
                 data[x] = (byte)(_messageBuffer[x * 2 + 6] | _messageBuffer[x * 2 + 7] << 7);
             }
-            
+
             reply.Data = data;
 
             if (I2CReplyReceived != null)
@@ -1393,7 +1495,7 @@ namespace Solid.Arduino.Firmata
 
             var builder = new StringBuilder(_messageBufferIndex);
 
-            for (int x = 4; x < _messageBufferIndex; x += 2 )
+            for (int x = 4; x < _messageBufferIndex; x += 2)
             {
                 builder.Append((char)(_messageBuffer[x] | (_messageBuffer[x + 1] << 7)));
             }
@@ -1401,27 +1503,24 @@ namespace Solid.Arduino.Firmata
             firmware.Name = builder.ToString();
             return new FirmataMessage(firmware, MessageType.FirmwareResponse);
         }
-    
 
-        private FirmataMessage CreateCustomSysExMessage()
+
+        private FirmataMessage CreateUserDefinedSysExMessage()
         {
-            var customSysEx = new CustomSysEx
+            var userDefinedSysEx = new SysEx
             {
-                Command = _messageBuffer[1],
-                Content = new byte[(_messageBufferIndex - 2) / 2]
+                Command = (byte)_messageBuffer[1],
+                Payload = new byte[(_messageBufferIndex - 2) / 2]
             };
 
-            var data = new byte[(_messageBufferIndex - 2) / 2];
 
-            for (var x = 0; x < customSysEx.Content.Length; x++)
-            {
-              customSysEx.Content[x] = (byte)(_messageBuffer[x * 2 + 2] | _messageBuffer[x * 2 + 3] << 7);
-            }
-            
-            return new FirmataMessage(customSysEx, MessageType.CustomSysEx);
+            for (var x = 0; x < userDefinedSysEx.Payload.Length; x++)
+                userDefinedSysEx.Payload[x] = (byte)(_messageBuffer[x * 2 + 2] | _messageBuffer[x * 2 + 3] << 7);
+
+            return new FirmataMessage(userDefinedSysEx, MessageType.UserDefinedSysEx);
         }
 
         #endregion
 
-  }
+    }
 }

@@ -189,4 +189,7 @@
   <data name="TimeoutEx_WaitStringRequest" xml:space="preserve">
     <value>Wait condition for string read in {0} mode timed out.</value>
   </data>
+  <data name="OutOfRange_UserDefinedSysExCommand" xml:space="preserve">
+      <value>Command must be [0x01 .. 0x0F]</value>
+  </data>
 </root>

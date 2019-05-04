@@ -324,5 +324,27 @@ namespace Solid.Arduino.Firmata
         /// <param name="pinNumber">The pin number</param>
         /// <returns>The pin's state</returns>
         Task<PinState> GetPinStateAsync(int pinNumber);
+        
+        /// <summary>
+        /// Sends a SysEx message.
+        /// </summary>
+        /// <param name="message"></param>
+        void SendSysEx(SysEx message);
+
+        /// <summary>
+        /// Sends a SysEx message and waits for and returns the first received SysEx message for which the replyCheck function returns true.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="replyCheck">Function that returns true if the received SysEx message matches the expected reply parameters.</param>
+        SysEx SendSysExWithReply(SysEx message, Func<SysEx, bool> replyCheck);
+
+        /// <summary>
+        /// Asynchronously sends a SysEx message and waits for and returns the first received SysEx message for which the replyCheck function returns true.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="replyCheck">Function that returns true if the received SysEx message matches the expected reply parameters.</param>
+        Task<SysEx> SendSysExWithReplyAsync(SysEx message, Func<SysEx, bool> replyCheck);
+
+        
     }
 }

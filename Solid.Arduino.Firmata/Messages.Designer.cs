@@ -19,7 +19,7 @@ namespace Solid.Arduino.Firmata {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Messages {
@@ -228,6 +228,15 @@ namespace Solid.Arduino.Firmata {
         internal static string NotImplementedEx_Command {
             get {
                 return ResourceManager.GetString("NotImplementedEx_Command", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Command must be [0x01 .. 0x0F].
+        /// </summary>
+        internal static string OutOfRange_UserDefinedSysExCommand {
+            get {
+                return ResourceManager.GetString("OutOfRange_UserDefinedSysExCommand", resourceCulture);
             }
         }
         

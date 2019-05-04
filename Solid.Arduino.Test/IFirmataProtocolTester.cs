@@ -97,7 +97,7 @@ namespace Solid.Arduino.Test
             Assert.AreEqual(firmware.Name, Name);
         }
 
-        
+
         [TestMethod]
         public void GetFirmwareAsync()
         {
@@ -141,7 +141,7 @@ namespace Solid.Arduino.Test
             Assert.AreEqual(firmware.MajorVersion, majorVersion);
             Assert.AreEqual(firmware.MinorVersion, minorVersion);
             Assert.AreEqual(firmware.Name, Name);
-        }        
+        }
 
         [TestMethod]
         public void GetBoardCapability()
@@ -793,7 +793,7 @@ namespace Solid.Arduino.Test
             var session = CreateFirmataSession(connection);
             int eventHits = 0;
 
-            session.AnalogStateReceived += (o, e) => 
+            session.AnalogStateReceived += (o, e) =>
             {
                 Assert.AreEqual(0, e.Value.Channel);
                 Assert.AreEqual(0, e.Value.Level);
@@ -947,10 +947,10 @@ namespace Solid.Arduino.Test
             session.SendStringData(null);
             Assert.AreEqual(1, eventHits, "MessageReceived event not hit once.");
         }
-        
-        //[TestMethod]
-        //[ExpectedException(typeof(TimeoutException))]
-        public void TimedoutResponse()
+
+        [TestMethod]
+        [ExpectedException(typeof(TimeoutException))]
+        public void TimedOutResponse()
         {
             var connection = new MockSerialConnection();
             var session = CreateFirmataSession(connection, 550);
@@ -962,36 +962,123 @@ namespace Solid.Arduino.Test
 
         [TestMethod]
         public void MixedOrderResponses()
-         {
-             var connection = new MockSerialConnection();
-             var session = CreateFirmataSession(connection, 3);
+        {
+            var connection = new MockSerialConnection();
+            var session = CreateFirmataSession(connection, 3);
 
             // We get first ProtocolVersion response and then FirmwareResponse
             connection.EnqueueRequestAndResponse(new byte[] { 0xF0, 0x79, 0xF7 },
                 new byte[]
                 {
-                    0xF9, 0x02, 0x04, 0xF0, 
-                    0x79, 
-                    0x01, 0x03,                    
+                    0xF9, 0x02, 0x04, 0xF0,
+                    0x79,
+                    0x01, 0x03,
                     0x74, 0x00, 0x65, 0x00, 0x73, 0x00, 0x74, 0x00,
                     0xF7
                 });
-             var f = session.GetFirmware();
-             Assert.AreEqual(1, f.MajorVersion);
-             Assert.AreEqual(3, f.MinorVersion);
-             Assert.AreEqual("test", f.Name);
-         }
+            var f = session.GetFirmware();
+            Assert.AreEqual(1, f.MajorVersion);
+            Assert.AreEqual(3, f.MinorVersion);
+            Assert.AreEqual("test", f.Name);
+        }
 
 
         private IFirmataProtocol CreateFirmataSession(IDataConnection connection, int timeout = -1)
         {
-            var session = new ArduinoSession(connection);
-            session.TimeOut = timeout;
+            var session = new ArduinoSession(connection) { TimeOut = timeout };
             session.MessageReceived += (o, e) =>
                 {
                     _messagesReceived.Enqueue(e.Value);
                 };
             return session;
+        }
+
+        [TestMethod]
+        public void SendSysEx_WithoutPayload_SysExCommandReceivedByConnection()
+        {
+            var connection = new MockSerialConnection();
+            var session = CreateFirmataSession(connection, 3);
+            var sysEx = new SysEx(0x79);
+            
+            connection.EnqueueRequest(new byte[] {0xF0, 0x79, 0xF7});
+            session.SendSysEx(sysEx);   
+        }
+
+        [TestMethod]
+        public void SendSysEx_WithPayload_SysExCommandReceivedByConnection()
+        {
+            var connection = new MockSerialConnection();
+            var session = CreateFirmataSession(connection, 3);
+            var sysEx = new SysEx(0x01, new byte[] { 0x01, 0x02, 0x03 });
+
+            connection.EnqueueRequest(new byte[] { 0xF0, 0x01, 0x01, 0x02, 0x03, 0xF7 });
+            session.SendSysEx(sysEx);
+        }
+
+        [TestMethod]
+        [Ignore]
+        public void SendSysExWithReply_ReplyReceived()
+        {
+            var connection = new MockSerialConnection();
+            var session = CreateFirmataSession(connection, 3);
+            // Send Firmware message via SendSysExWithReply.
+            var sysEx = new SysEx(0x79);
+            
+            connection.EnqueueRequestAndResponse(new byte[] { 0xF0, 0x79, 0xF7 },
+                new byte[]
+                {
+                    0xF0,
+                    0x79,
+                    0x01, 0x03,
+                    0x74, 0x00, 0x65, 0x00, 0x73, 0x00, 0x74, 0x00,
+                    0xF7
+                });
+
+            SysEx reply = session.SendSysExWithReply(sysEx, ex => ex.Command == 0x79);
+
+            var f = CreateFirmware(reply);
+            Assert.AreEqual(1, f.MajorVersion);
+            Assert.AreEqual(3, f.MinorVersion);
+            Assert.AreEqual("test", f.Name);
+        }
+
+        private Firmware CreateFirmware(SysEx reply)
+        {
+            if (reply.Payload == null || reply.Payload.Length != 10)
+                Assert.Fail("SysEx payload does match a Firmware response.");
+
+            var firmware = new Firmware
+            {
+                MajorVersion = reply.Payload[2],
+                MinorVersion = reply.Payload[3]
+            };
+
+            firmware.Name = DecodeToString(reply);
+            return firmware;
+        }
+
+        private static string DecodeToString(SysEx reply)
+        {
+            var builder = new StringBuilder(reply.Payload.Length);
+
+            for (int x = 4; x < reply.Payload.Length; x += 2)
+                builder.Append((char) (reply.Payload[x] | (reply.Payload[x + 1] << 7)));
+
+            return builder.ToString();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public void SendSysExWithReply_TimeOut_ReplyNotReceived()
+        {
+            Assert.Fail();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public void SendSysExWithReplyAsync_ReplyReceived()
+        {
+            Assert.Fail();
         }
     }
 }
