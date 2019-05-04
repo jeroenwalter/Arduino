@@ -71,6 +71,10 @@
       <Project>{af35f810-6ce9-4a99-8681-3259c063626c}</Project>
       <Name>Solid.Arduino.Firmata</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Solid.Arduino.Serial\Solid.Arduino.Serial.csproj">
+      <Project>{3590c7f5-c20c-4a96-9e50-9771c1a10944}</Project>
+      <Name>Solid.Arduino.Serial</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Solid.Arduino\Solid.Arduino.csproj">
       <Project>{fdf9e431-2390-4c7b-ae60-10183439a683}</Project>
       <Name>Solid.Arduino</Name>

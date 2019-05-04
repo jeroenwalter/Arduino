@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Solid.Arduino.Firmata;
+using Solid.Arduino.Serial;
 
 namespace Solid.Arduino.Test
 {

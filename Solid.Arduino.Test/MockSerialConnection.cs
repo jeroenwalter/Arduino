@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Solid.Arduino.Firmata;
+using Solid.Arduino.Serial;
 
 namespace Solid.Arduino.Test
 {
@@ -244,12 +245,12 @@ namespace Solid.Arduino.Test
                 || response.Length == 0)
                 return;
 
-            var charReceivedEventArgs = new DataReceivedEventArgs(SerialData.Chars);
+            var charReceivedEventArgs = new SerialDataReceivedEventArgs(SerialData.Chars);
 
             for (int x = 0; x < response.Length; x++)
             {
                 if (response[x] == 26)
-                    DataReceived(this, new DataReceivedEventArgs(SerialData.Eof));
+                    DataReceived(this, new SerialDataReceivedEventArgs(SerialData.Eof));
                 else
                     DataReceived(this, charReceivedEventArgs);
             }
