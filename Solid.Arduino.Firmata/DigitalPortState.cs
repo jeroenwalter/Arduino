@@ -25,7 +25,7 @@ namespace Solid.Arduino.Firmata
         public bool IsSet(int pin)
         {
             if (pin < 0 || pin > 7)
-                throw new ArgumentOutOfRangeException("pin", Messages.ArgumentEx_PinRange0_7);
+                throw new ArgumentOutOfRangeException(nameof(pin), Messages.ArgumentEx_PinRange0_7);
 
             return (Pins & 1 << pin) > 0;
         }
