@@ -7,16 +7,29 @@ using Solid.Arduino.Serial;
 
 namespace Solid.Arduino.Core.Run
 {
-  class Program
+    /// <summary>
+    ///     Load the sketch TestStandardFirmata.ino in the Arduino to run this test.
+    /// </summary>
+    class Program
     {
         static IDataConnectionFactory _serialConnectionFactory = new SerialConnectionFactory();
         private static ILogger _logger = new ConsoleLogger();
+
+        private const byte UserDefinedSysExCommandStart = 0;
+        private const byte EchoPayloadCommand = UserDefinedSysExCommandStart;
+        private const byte SendCounterCommand = UserDefinedSysExCommandStart + 1;
+        
 
         static void Main(string[] args)
         {
             using ArduinoSession session = GetFirmataSession();
             if (session != null)
             {
+                session.MessageReceived += SessionOnMessageReceived;
+                SendUserDefinedSysExEchoCommand(session, false);
+                SendUserDefinedSysExEchoCommand(session, true);
+                Console.WriteLine("Press a key");
+                Console.ReadKey(true);
                 DisplayPortCapabilities(session);
                 Console.WriteLine("Press a key");
                 Console.ReadKey(true);
@@ -27,6 +40,40 @@ namespace Solid.Arduino.Core.Run
             Console.WriteLine("Press a key");
             Console.ReadKey(true);
         }
+
+        private static void SessionOnMessageReceived(object sender, FirmataMessageEventArgs eventArgs)
+        {
+            if (eventArgs.Value is FirmataMessage<SysEx> sysExMessage)
+            {
+                if (sysExMessage.Value.Command == SendCounterCommand)
+                {
+                    var counter = sysExMessage.Value.Payload[0] | sysExMessage.Value.Payload[1] << 7;
+                    Console.WriteLine($"Counter: {counter}");
+                }
+            }
+        }
+
+        private static void SendUserDefinedSysExEchoCommand(ArduinoSession session, bool forceTimeOut)
+        {
+            Console.WriteLine($"SendUserDefinedSysExEchoCommand forceTimeOut = {forceTimeOut}");
+
+            try
+            {
+                var payload = new byte[] { 1, 2, 3, 4 };
+                var sysEx = new SysEx(EchoPayloadCommand, payload);
+                var reply = session.SendSysExWithReply(sysEx, result => result.Command == EchoPayloadCommand && result.Payload[0] == (forceTimeOut ? 127 : 1));
+
+                Console.WriteLine($"SysEx reply: {reply.Command} length: {reply.Payload.Length}");
+                foreach (var value in reply.Payload)
+                    Console.Write($"{value:X2} ");
+                Console.WriteLine();
+            }
+            catch (TimeoutException exception)
+            {
+                Console.WriteLine(exception.Message);
+            }
+        }
+
 
         private static ArduinoSession GetFirmataSession()
         {
