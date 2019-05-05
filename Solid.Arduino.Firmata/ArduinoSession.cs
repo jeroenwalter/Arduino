@@ -662,7 +662,7 @@ namespace Solid.Arduino.Firmata
         public I2CReply GetI2CReply(int slaveAddress, int bytesToRead)
         {
             ReadI2COnce(slaveAddress, bytesToRead);
-            
+
             return GetMessageFromQueue<I2CReply>().Value;
         }
 
@@ -745,13 +745,6 @@ namespace Solid.Arduino.Firmata
 
         public Task<SysEx> SendSysExWithReplyAsync(SysEx message, Func<SysEx, bool> replyCheck)
         {
-            SendSysEx(message);
-
-            //_awaitedMessagesQueue.Enqueue(new FirmataMessage(MessageType.UserDefinedSysEx));
-
-            //return await Task.Run(() =>
-            //    (I2CReply)((FirmataMessage)GetMessageFromQueue(new FirmataMessage(MessageType.I2CReply))).Value);
-
             throw new NotImplementedException();
         }
 
@@ -848,11 +841,14 @@ namespace Solid.Arduino.Firmata
 
         private IFirmataMessage WaitForMessageFromQueue(Func<IFirmataMessage, bool> messagePredicate, int timeOutInMs)
         {
-            bool lockTaken = false;
+            var lockTaken = false;
 
             try
             {
-                Monitor.TryEnter(_receivedMessageList, timeOutInMs, ref lockTaken);
+                var stopwatch = Stopwatch.StartNew();
+                var remainingTime = timeOutInMs;
+
+                Monitor.TryEnter(_receivedMessageList, remainingTime, ref lockTaken);
 
                 while (lockTaken)
                 {
@@ -870,9 +866,24 @@ namespace Solid.Arduino.Firmata
                         }
                     }
 
-                    lockTaken = Monitor.Wait(_receivedMessageList, timeOutInMs);
+                    remainingTime = (int)(timeOutInMs - stopwatch.ElapsedMilliseconds);
+                    if (remainingTime > 0)
+                    {
+                        lockTaken = Monitor.Wait(_receivedMessageList, remainingTime);
+                    }
+                    else
+                    {
+                        Monitor.PulseAll(_receivedMessageList);
+                        return null;
+                    }
                 }
 
+                Monitor.PulseAll(_receivedMessageList);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Monitor.PulseAll(_receivedMessageList);
                 return null;
             }
             finally
@@ -1186,8 +1197,6 @@ namespace Solid.Arduino.Firmata
                 return;
             }
 
-            // Check if someone is waiting for this message.
-
             switch (_messageBuffer[1])
             {
                 case 0x6A: // AnalogMappingResponse
@@ -1214,34 +1223,50 @@ namespace Solid.Arduino.Firmata
                     DeliverMessage(CreateFirmwareResponse());
                     return;
 
-                case int n when (n >= 0x01 && n <= 0x0F): // User-defined command
+                case int n when (n >= 0x00 && n <= 0x0F): // User-defined command
                     DeliverMessage(CreateUserDefinedSysExMessage());
                     return;
 
                 default: // Unknown or unsupported message
                     throw new NotImplementedException();
-
             }
         }
 
         private void DeliverMessage(IFirmataMessage message)
         {
-            _processMessageFunction = null;
-
-            lock (_receivedMessageList)
+            var lockTaken = false;
+            try
             {
+                _processMessageFunction = null;
+
+                Monitor.TryEnter(_receivedMessageList, _messageTimeout, ref lockTaken);
+                if (!lockTaken)
+                    return;
+
                 if (_receivedMessageList.Count >= MaxQueueLength)
-                    throw new OverflowException(Messages.OverflowEx_MsgBufferFull);
+                {
+                    // TODO: add logging
+                    //throw new OverflowException(Messages.OverflowEx_MsgBufferFull);
+                }
 
                 // Remove all unprocessed and timed-out messages.
+                while (_receivedMessageList.Count > MaxQueueLength)
+                    _receivedMessageList.RemoveFirst();
+
                 while (_receivedMessageList.Count > 0 &&
-                    ((DateTime.UtcNow - _receivedMessageList.First.Value.Time).TotalMilliseconds > TimeOut))
+                       ((DateTime.UtcNow - _receivedMessageList.First.Value.Time).TotalMilliseconds > TimeOut))
                 {
                     _receivedMessageList.RemoveFirst();
                 }
 
                 _receivedMessageList.AddLast(message);
+
                 Monitor.PulseAll(_receivedMessageList);
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(_receivedMessageList);
             }
 
             if (message.GetType() != typeof(FirmataMessage<I2CReply>))
