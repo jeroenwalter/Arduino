@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Solid.Arduino</RootNamespace>
     <AssemblyName>Solid.Arduino</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -43,21 +43,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EnhancedSerialConnectionFactory.cs" />
-    <Compile Include="EnhancedSerialPort.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="EnhancedSerialPort.cs" />
     <Compile Include="Messages.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Messages.resx</DependentUpon>
     </Compile>
-    <Compile Include="EnhancedSerialConnection.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="EnhancedSerialConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SerialConnection.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="SerialConnection.cs" />
     <Compile Include="SerialConnectionFactory.cs" />
     <Compile Include="SerialPortFixer.cs" />
   </ItemGroup>

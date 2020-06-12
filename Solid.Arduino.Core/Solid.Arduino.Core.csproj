@@ -1,17 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <LangVersion>preview</LangVersion>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.IO.Ports" Version="4.6.0-preview4.19212.13" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="System.IO.Ports" Version="4.7.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Solid.Arduino.Firmata\Solid.Arduino.Firmata.csproj" />
-    <ProjectReference Include="..\Solid.Arduino.Serial\Solid.Arduino.Serial.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Solid.Arduino.Firmata\Solid.Arduino.Firmata.csproj" />
+        <ProjectReference Include="..\Solid.Arduino.Serial\Solid.Arduino.Serial.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="EnhancedSerialConnection.cs">
+        <SubType>Component</SubType>
+      </Compile>
+      <Compile Update="EnhancedSerialPort.cs">
+        <SubType>Component</SubType>
+      </Compile>
+    </ItemGroup>
 
 </Project>
