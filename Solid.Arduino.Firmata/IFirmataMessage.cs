@@ -11,5 +11,7 @@ namespace Solid.Arduino.Firmata
         ///     Gets the time of the delivered message.
         /// </summary>
         DateTime Time { get; }
+
+        string Name { get; }
     }
 }

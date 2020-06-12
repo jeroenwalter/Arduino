@@ -15,6 +15,8 @@ namespace Solid.Arduino.Firmata
             Value = value;
         }
 
+        public string Name => typeof(T).Name;
+
         /// <summary>
         ///     Gets the specific value delivered by the message.
         /// </summary>
