@@ -1,4 +1,6 @@
-﻿namespace Solid.Arduino.Firmata
+﻿using System;
+
+namespace Solid.Arduino.Firmata
 {
     /// <summary>
     /// Simple logger interface.
@@ -14,5 +16,12 @@
         void Warn(string message, params object[] args);
         void Error(string message, params object[] args);
         void Fatal(string message, params object[] args);
-    }
+
+        void Debug(Exception exception, string message, params object[] args);
+        void Trace(Exception exception, string message, params object[] args);
+        void Info(Exception exception, string message, params object[] args);
+        void Warn(Exception exception, string message, params object[] args);
+        void Error(Exception exception, string message, params object[] args);
+        void Fatal(Exception exception, string message, params object[] args);
+  }
 }

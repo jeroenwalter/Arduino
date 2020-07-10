@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Solid.Arduino.Core.Run": {
+      "commandName": "Project",
+      "remoteDebugEnabled": false,
+      "authenticationMode": "None"
+    }
+  }
+}

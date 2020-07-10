@@ -11,15 +11,11 @@
     <ItemGroup>
         <ProjectReference Include="..\Solid.Arduino.Firmata\Solid.Arduino.Firmata.csproj" />
         <ProjectReference Include="..\Solid.Arduino.Serial\Solid.Arduino.Serial.csproj" />
+        <ProjectReference Include="..\System.IO.Ports.Mono\System.IO.Ports.Mono.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="EnhancedSerialConnection.cs">
-        <SubType>Component</SubType>
-      </Compile>
-      <Compile Update="EnhancedSerialPort.cs">
-        <SubType>Component</SubType>
-      </Compile>
+      <Compile Update="MonoSerialConnection.cs" />
     </ItemGroup>
 
 </Project>

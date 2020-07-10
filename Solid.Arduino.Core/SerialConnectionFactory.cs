@@ -9,7 +9,9 @@ namespace Solid.Arduino.Core
 {
     public class SerialConnectionFactory : IDataConnectionFactory
     {
-        public IReadOnlyList<string> GetDeviceNames() => SerialPort.GetPortNames();
+      private static bool IsWindows => Environment.OSVersion.Platform == PlatformID.Win32Windows || Environment.OSVersion.Platform == PlatformID.Win32NT;
+
+    public IReadOnlyList<string> GetDeviceNames() => SerialPort.GetPortNames();
 
         public IDataConnection Create(string deviceName, IDataConnectionConfiguration configuration)
         {
@@ -19,7 +21,11 @@ namespace Solid.Arduino.Core
             if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
 
-            return new SerialConnection(deviceName, ((SerialConnectionConfiguration) configuration).BaudRate);
-        }
+            // Unless Microsoft fixes their implementation, don't use it, not even for Windows.
+            //if (IsWindows)
+            //  return new MicrosoftSerialConnection(deviceName, ((SerialConnectionConfiguration) configuration).BaudRate);
+            //else
+              return new MonoSerialConnection(deviceName, ((SerialConnectionConfiguration)configuration).BaudRate);
+    }
     }
 }

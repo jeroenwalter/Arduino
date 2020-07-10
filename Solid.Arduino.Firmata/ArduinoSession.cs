@@ -106,6 +106,7 @@ namespace Solid.Arduino.Firmata
 
         #region Fields
 
+        private readonly Stopwatch _stopWatch = new Stopwatch();
         private const byte AnalogMessage = 0xE0;
         private const byte DigitalMessage = 0x90;
         private const byte VersionReportHeader = 0xF9;
@@ -129,6 +130,8 @@ namespace Solid.Arduino.Firmata
         // TODO: remove string messaging from ArduinoSession
         private readonly char[] _stringBuffer = new char[BufferSize];
 
+        private readonly object _readLock = new object();
+
         #endregion
 
         #region Constructors
@@ -142,11 +145,13 @@ namespace Solid.Arduino.Firmata
         {
             Connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _gotOpenConnection = connection.IsOpen;
-
+      
             if (!connection.IsOpen)
                 connection.Open();
 
             Connection.DataReceived += SerialDataReceived;
+
+            _stopWatch.Start();
         }
 
         /// <summary>
@@ -459,7 +464,8 @@ namespace Solid.Arduino.Firmata
         /// <inheritdoc cref="IFirmataProtocol.RequestFirmware"/>
         public void RequestFirmware()
         {
-            SendSysExCommand(0x79);
+          Console.WriteLine($"\r\n{_stopWatch.ElapsedMilliseconds}: RequestFirmware()");
+          SendSysExCommand(0x79);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetFirmware"/>
@@ -479,7 +485,8 @@ namespace Solid.Arduino.Firmata
         /// <inheritdoc cref="IFirmataProtocol.RequestProtocolVersion"/>
         public void RequestProtocolVersion()
         {
-            Connection.Write(new byte[] { 0xF9 }, 0, 1);
+          Console.WriteLine($"\r\n{_stopWatch.ElapsedMilliseconds}: RequestProtocolVersion()");
+          Connection.Write(new byte[] { 0xF9 }, 0, 1);
         }
 
         /// <inheritdoc cref="IFirmataProtocol.GetProtocolVersion"/>
@@ -839,6 +846,7 @@ namespace Solid.Arduino.Firmata
             throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, typeof(T).Name));
         }
 
+
         private IFirmataMessage WaitForMessageFromQueue(Func<IFirmataMessage, bool> messagePredicate, int timeOutInMs)
         {
             var lockTaken = false;
@@ -946,60 +954,69 @@ namespace Solid.Arduino.Firmata
             Connection.Write(command, 0, command.Length);
         }
 
-        /// <summary>
-        /// Event handler processing data bytes received on the serial port.
-        /// </summary>
-        private void SerialDataReceived(object sender, DataReceivedEventArgs e)
+        static int concurrentCount = 0;
+    /// <summary>
+    /// Event handler processing data bytes received on the serial port.
+    /// </summary>
+    private void SerialDataReceived(object sender, DataReceivedEventArgs e)
         {
+          
+          Interlocked.Increment(ref concurrentCount);
+          Console.WriteLine($"concurrentCount {concurrentCount} _messageBufferIndex {_messageBufferIndex}");
+          
+          lock (_readLock)
+          {
             while (Connection.IsOpen && Connection.BytesToRead > 0)
             {
-                int serialByte = 0;
+              int serialByte;
 
-                try
-                {
-                    serialByte = Connection.ReadByte();
-                }
-                catch (Exception exception)
-                {
-                    // Connection is closed while entering this loop.
-                    // This happens when disposing of the ArduinoSession while still receiving data.
-                    Debug.WriteLine(exception);
-                    return;
-                }
+              try
+              {
+                serialByte = Connection.ReadByte();
+              }
+              catch (Exception exception)
+              {
+                // Connection is closed while entering this loop.
+                // This happens when disposing of the ArduinoSession while still receiving data.
+                Debug.WriteLine(exception);
+                return;
+              }
 
-                /*
-                #if DEBUG
-                                if (_messageBufferIndex > 0 && _messageBufferIndex % 8 == 0)
-                                    Debug.WriteLine(string.Empty);
+              //#if DEBUG
+              if (_messageBufferIndex > 0 && _messageBufferIndex % 8 == 0)
+                Console.WriteLine(string.Empty);
 
-                                Debug.Write(string.Format("{0:x2} ", serialByte));
-                #endif
-                */
-                if (_processMessageFunction != null)
+              Console.Write($"{serialByte:x2} ");
+              //#endif
+
+              if (_processMessageFunction != null)
+              {
+                _processMessageFunction(serialByte);
+
+#if DEBUG
+                if (_processMessageFunction == null)
+                  Console.WriteLine(string.Empty);
+#endif
+
+              }
+              else
+              {
+                if ((serialByte & 0x80) != 0)
                 {
-                    _processMessageFunction(serialByte);
-                    /*
-                    #if DEBUG
-                                      if (_processMessageFunction == null)
-                                        Debug.WriteLine(string.Empty);
-                    #endif
-                    */
+                  
+
+                  StartMessage(serialByte);
                 }
                 else
                 {
-                    if ((serialByte & 0x80) != 0)
-                    {
-                        // Process Firmata command byte.
-                        ProcessCommand(serialByte);
-                    }
-                    else
-                    {
-                        // Process ASCII character.
-                        ProcessAsciiString(serialByte);
-                    }
+                  ProcessAsciiString(serialByte);
                 }
+              }
             }
-        }
+          }
+
+          Interlocked.Decrement(ref concurrentCount);
+    }
 
         private void ProcessAsciiString(int serialByte)
         {
@@ -1076,13 +1093,14 @@ namespace Solid.Arduino.Firmata
             }
         }
 
-        private void ProcessCommand(int serialByte)
-        {
+        private void StartMessage(int serialByte)
+        { 
+            Console.WriteLine($"{_stopWatch.ElapsedMilliseconds}:  StartMessage Command byte {serialByte:x2}");
+
             _messageBuffer[0] = serialByte;
             _messageBufferIndex = 1;
-            MessageHeader header = (MessageHeader)(serialByte & 0xF0);
-
-            switch (header)
+      
+            switch ((MessageHeader)(serialByte & 0xF0))
             {
                 case MessageHeader.AnalogState:
                     _processMessageFunction = ProcessAnalogStateMessage;
@@ -1093,9 +1111,8 @@ namespace Solid.Arduino.Firmata
                     break;
 
                 case MessageHeader.SystemExtension:
-                    header = (MessageHeader)serialByte;
 
-                    switch (header)
+                    switch ((MessageHeader)serialByte)
                     {
                         case MessageHeader.SystemExtension:
                             _processMessageFunction = ProcessSysExMessage;
@@ -1110,7 +1127,10 @@ namespace Solid.Arduino.Firmata
                         default:
                             // 0xF? command not supported.
                             //throw new NotImplementedException(string.Format(Messages.NotImplementedEx_Command, serialByte));
+                            _messageBuffer[0] = 0;
+                            _messageBufferIndex = 0;
 
+                            Console.WriteLine($"\r\n\r\n------------------\r\nUnknown sysex command {serialByte}\r\n\r\n------------------\r\n");
                             // Stream is most likely out of sync or the baudrate is incorrect.
                             // Don't throw an exception here, as we're in the middle of handling an event and
                             // have no way of catching an exception, other than a global unhandled exception handler.
@@ -1127,6 +1147,10 @@ namespace Solid.Arduino.Firmata
                     // Don't throw an exception here, as we're in the middle of handling an event from the serial port and
                     // have no way of catching an exception, other than a global unhandled exception handler.
                     // Just skip these bytes, until sync is found when a new message starts.
+                    _messageBuffer[0] = 0;
+                    _messageBufferIndex = 0;
+
+                    Console.WriteLine($"\r\n\r\n------------------\r\nCommand not supported {serialByte}\r\n\r\n------------------\r\n");
                     return;
             }
         }
@@ -1232,6 +1256,7 @@ namespace Solid.Arduino.Firmata
             }
         }
 
+
         private void DeliverMessage(IFirmataMessage message)
         {
             var lockTaken = false;
@@ -1251,14 +1276,20 @@ namespace Solid.Arduino.Firmata
 
                 // Remove all unprocessed and timed-out messages.
                 while (_receivedMessageList.Count > MaxQueueLength)
-                    _receivedMessageList.RemoveFirst();
+                {
+                  Console.WriteLine($"{_stopWatch.ElapsedMilliseconds}: DeliverMessage removed, MaxQueueLength: {_receivedMessageList.First().Name}");
+                  _receivedMessageList.RemoveFirst();
+                }
+                    
 
                 while (_receivedMessageList.Count > 0 &&
                        ((DateTime.UtcNow - _receivedMessageList.First.Value.Time).TotalMilliseconds > TimeOut))
                 {
-                    _receivedMessageList.RemoveFirst();
+                  Console.WriteLine($"{_stopWatch.ElapsedMilliseconds}: DeliverMessage removed, TimeOut: {_receivedMessageList.First().Name}");
+                  _receivedMessageList.RemoveFirst();
                 }
 
+                Console.WriteLine($"{_stopWatch.ElapsedMilliseconds}: DeliverMessage added: {message.Name}");
                 _receivedMessageList.AddLast(message);
 
                 Monitor.PulseAll(_receivedMessageList);

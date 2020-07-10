@@ -41,5 +41,41 @@ namespace Solid.Arduino.Core.Run
     {
       Console.WriteLine("FATAL: " + message, args);
     }
+
+    public void Debug(Exception exception, string message, params object[] args)
+    {
+      Debug(message, args);
+      Console.WriteLine(exception);
+    }
+
+    public void Trace(Exception exception, string message, params object[] args)
+    {
+      Trace(message, args);
+      Console.WriteLine(exception);
+    }
+
+    public void Info(Exception exception, string message, params object[] args)
+    {
+      Info(message, args);
+      Console.WriteLine(exception);
+    }
+
+    public void Warn(Exception exception, string message, params object[] args)
+    {
+      Warn(message, args);
+      Console.WriteLine(exception);
+    }
+
+    public void Error(Exception exception, string message, params object[] args)
+    {
+      Error(message, args);
+      Console.WriteLine(exception);
+    }
+
+    public void Fatal(Exception exception, string message, params object[] args)
+    {
+      Fatal(message, args);
+      Console.WriteLine(exception);
+    }
   }
 }
