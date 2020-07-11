@@ -114,7 +114,9 @@ namespace Solid.Arduino.Core.Run
       stopwatch.Start();
 
       serial.Open();
-      Console.WriteLine($"Serial port '{port}' opened");
+      Console.WriteLine($"Serial port '{port}' opened, waiting 5s for Arduino startup...");
+      Thread.Sleep(5000);
+
       while (serial.IsOpen && stopwatch.ElapsedMilliseconds < 6000)
       {
         try
@@ -174,8 +176,8 @@ namespace Solid.Arduino.Core.Run
 
       serial.DataReceived += OnSerialOnDataReceived;
       serial.Open();
-      Console.WriteLine($"Serial port '{port}' opened");
-      Thread.Sleep(2000);
+      Console.WriteLine($"Serial port '{port}' opened, waiting 5s for Arduino startup...");
+      Thread.Sleep(5000);
       serial.DataReceived -= OnSerialOnDataReceived;
       serial.Close();
     }
@@ -204,9 +206,7 @@ namespace Solid.Arduino.Core.Run
 
     private static void TestSomeMessages(string port)
     {
-      var configuration = new SerialConnectionConfiguration { BaudRate = SerialBaudRate.Bps_57600 };
-      IDataConnection connection = _serialConnectionFactory.Create(port, configuration);
-      var firmata = new FirmataSession(connection, _logger, 5000);
+      using FirmataSession firmata = GetFirmataSession();
       firmata.MessageReceived += OnFirmataMessageReceived;
       bool success;
       bool mustStop = false;
@@ -283,7 +283,6 @@ namespace Solid.Arduino.Core.Run
 
       firmata.MessageReceived -= OnFirmataMessageReceived;
       firmata.Dispose();
-      connection.Dispose();
     }
 
     private static void TestFirmata(string port)
@@ -343,7 +342,7 @@ namespace Solid.Arduino.Core.Run
     {
       var finder = new FirmataFinder(_serialConnectionFactory, _logger)
       {
-        //MillisecondsToWaitAfterOpen = IsWindows ? 0 : 5000
+        StartupTimeoutMs = 5000
       };
 
       Console.WriteLine("Searching Arduino connection...");

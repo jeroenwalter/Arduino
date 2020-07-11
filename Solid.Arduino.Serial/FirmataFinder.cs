@@ -17,7 +17,7 @@ namespace Solid.Arduino.Serial
         private readonly ILogger _logger;
         public IDataConnectionFactory Factory { get; }
 
-        public int MillisecondsToWaitAfterOpen { get; set; } = 0;
+        public int StartupTimeoutMs { get; set; } = 5000;
 
         #region Fields
 
@@ -91,10 +91,7 @@ namespace Solid.Arduino.Serial
 
         private static bool IsFirmataAvailable(FirmataSession session)
         { 
-            //TODO: Fix IsFirmataAvailable, will now always return true......
-            return true;
-
-            Firmware firmware = session.GetFirmware();
+            var firmware = session.GetFirmware();
             return firmware.MajorVersion >= 2;
         }
 
@@ -114,13 +111,11 @@ namespace Solid.Arduino.Serial
 
                         _logger?.Debug("FindConnection: Checking for Firmata on Port {0}:{1}", portName, (int)baudRate);
 
-                        if (MillisecondsToWaitAfterOpen > 0)
-                          Thread.Sleep(MillisecondsToWaitAfterOpen);
-
-                        if (isDeviceAvailable(session))
+                        bool success = session.WaitForStartup(isDeviceAvailable, StartupTimeoutMs);
+                        if (success)
                         {
-                            _logger?.Info("FindConnection: Firmata found on Port {0}:{1}", portName, (int)baudRate);
-                            return session;
+                          _logger?.Info("FindConnection: Firmata found on Port {0}:{1}", portName, (int) baudRate);
+                          return session;
                         }
                     }
                     catch (UnauthorizedAccessException)

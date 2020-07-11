@@ -62,9 +62,6 @@ namespace Solid.Arduino.Firmata
 #endif
 
     private const int BufferSize = 2048;
-    //private const int MaxQueueLength = 100;
-    //private readonly LinkedList<IFirmataMessage> _receivedMessageList = new LinkedList<IFirmataMessage>();
-
     private readonly bool _gotOpenConnection;
 
     private int _messageTimeout = -1;
@@ -89,7 +86,6 @@ namespace Solid.Arduino.Firmata
       {
         _logger.Info("FirmataSession opening connection '{0}'", connection.Name);
         connection.Open();
-
       }
       else
       {
@@ -102,6 +98,32 @@ namespace Solid.Arduino.Firmata
 #if CONSOLE_OUTPUT
       _stopWatch.Start();
 #endif
+    }
+
+    public bool WaitForStartup(Func<FirmataSession, bool> isDeviceAvailable, int startupTimeoutMs)
+    {
+      if (_messageTimeout == Connection.InfiniteTimeout)
+        throw new InvalidOperationException("message timeout is infinite.");
+      var stopwatch = new Stopwatch();
+      var success = false;
+      stopwatch.Start();
+      do
+      {
+        try
+        {
+          if (!isDeviceAvailable(this))
+            continue;
+        }
+        catch (TimeoutException)
+        {
+          _logger.Info($"Timeout while waiting for Firmata startup on port {Connection.Name}");
+        }
+        
+        success = true;
+      } while (!success && stopwatch.ElapsedMilliseconds < startupTimeoutMs);
+
+      stopwatch.Stop();
+      return success;
     }
 
     /// <summary>
