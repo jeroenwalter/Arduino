@@ -339,6 +339,15 @@ namespace Solid.Arduino.Firmata
         SysEx SendSysExWithReply(SysEx message, Func<SysEx, bool> replyCheck);
 
         /// <summary>
+        /// Sends a SysEx message and waits for and returns the first received SysEx message for which the replyCheck function returns true.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="replyCheck">Function that returns true if the received SysEx message matches the expected reply parameters.</param>
+        /// <param name="timeoutMs">Message time</param>
+        SysEx SendSysExWithReply(SysEx message, Func<SysEx, bool> replyCheck, int? timeoutMs) =>
+          SendSysExWithReply(message, replyCheck);
+
+        /// <summary>
         /// Asynchronously sends a SysEx message and waits for and returns the first received SysEx message for which the replyCheck function returns true.
         /// </summary>
         /// <param name="message"></param>

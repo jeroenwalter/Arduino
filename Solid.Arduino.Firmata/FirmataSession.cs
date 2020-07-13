@@ -1,5 +1,5 @@
-﻿//#define CONSOLE_OUTPUT
-#define OUTPUT_ALL_BYTES
+﻿//#define DEBUG_OUTPUT
+//#define OUTPUT_ALL_BYTES
 
 using System;
 using System.Collections.Generic;
@@ -28,17 +28,17 @@ namespace Solid.Arduino.Firmata
   /// IFirmataProtocol firmata = (IFirmataProtocol)session;
   ///
   /// Firmware firm = firmata.GetFirmware();
-  /// Console.WriteLine("Firmware: {0} {1}.{2}", firm.Name, firm.MajorVersion, firm.MinorVersion);
+  /// Debug.WriteLine("Firmware: {0} {1}.{2}", firm.Name, firm.MajorVersion, firm.MinorVersion);
   ///
   /// ProtocolVersion version = firmata.GetProtocolVersion();
-  /// Console.WriteLine("Protocol version: {0}.{1}", version.Major, version.Minor);
+  /// Debug.WriteLine("Protocol version: {0}.{1}", version.Major, version.Minor);
   ///
   /// BoardCapability caps = firmata.GetBoardCapability();
-  /// Console.WriteLine("Board Capabilities:");
+  /// Debug.WriteLine("Board Capabilities:");
   ///
   /// foreach (var pincap in caps.PinCapabilities)
   /// {
-  ///    Console.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}",
+  ///    Debug.WriteLine("Pin {0}: Input: {1}, Output: {2}, Analog: {3}, Analog-Res: {4}, PWM: {5}, PWM-Res: {6}, Servo: {7}, Servo-Res: {8}",
   ///        pincap.PinNumber,
   ///        pincap.DigitalInput,
   ///        pincap.DigitalOutput,
@@ -49,15 +49,15 @@ namespace Solid.Arduino.Firmata
   ///        pincap.Servo,
   ///        pincap.ServoResolution);
   /// }
-  /// Console.WriteLine();
-  /// Console.ReadLine();
+  /// Debug.WriteLine();
+  /// Debug.ReadLine();
   /// </code>
   /// </example>
   public class FirmataSession : IFirmataProtocol, IDisposable
   {
     private readonly ILogger _logger;
 
-#if CONSOLE_OUTPUT
+#if DEBUG_OUTPUT
     private readonly Stopwatch _stopWatch = new Stopwatch();
 #endif
 
@@ -95,7 +95,7 @@ namespace Solid.Arduino.Firmata
 
       Connection.DataReceived += SerialDataReceived;
 
-#if CONSOLE_OUTPUT
+#if DEBUG_OUTPUT
       _stopWatch.Start();
 #endif
     }
@@ -113,13 +113,14 @@ namespace Solid.Arduino.Firmata
         {
           if (!isDeviceAvailable(this))
             continue;
+
+          success = true;
         }
         catch (TimeoutException)
         {
           _logger.Info($"Timeout while waiting for Firmata startup on port {Connection.Name}");
         }
         
-        success = true;
       } while (!success && stopwatch.ElapsedMilliseconds < startupTimeoutMs);
 
       stopwatch.Stop();
@@ -330,8 +331,8 @@ namespace Solid.Arduino.Firmata
     /// <inheritdoc cref="IFirmataProtocol.RequestFirmware"/>
     public void RequestFirmware()
     {
-#if CONSOLE_OUTPUT
-      Console.WriteLine($"\r\n{_stopWatch.ElapsedMilliseconds}: RequestFirmware()");
+#if DEBUG_OUTPUT
+      Debug.WriteLine($"{_stopWatch.ElapsedMilliseconds}: RequestFirmware()");
 #endif
 
       SendSysExCommand(SysExCommand.ReportFirmware);
@@ -354,8 +355,8 @@ namespace Solid.Arduino.Firmata
     /// <inheritdoc cref="IFirmataProtocol.RequestProtocolVersion"/>
     public void RequestProtocolVersion()
     {
-#if CONSOLE_OUTPUT
-      Console.WriteLine($"\r\n{_stopWatch.ElapsedMilliseconds}: RequestProtocolVersion()");
+#if DEBUG_OUTPUT
+      Debug.WriteLine($"{_stopWatch.ElapsedMilliseconds}: RequestProtocolVersion()");
 #endif
       Connection.Write(new byte[] { (byte)FirmataCommand.ProtocolVersion }, 0, 1);
     }
@@ -446,6 +447,9 @@ namespace Solid.Arduino.Firmata
 
 
     public SysEx SendSysExWithReply(SysEx message, Func<SysEx, bool> replyCheck)
+      => SendSysExWithReply(message, replyCheck, _messageTimeout);
+
+    public SysEx SendSysExWithReply(SysEx message, Func<SysEx, bool> replyCheck, int? timeoutMs)
     {
       if (replyCheck == null)
         throw new ArgumentNullException(nameof(replyCheck));
@@ -454,7 +458,7 @@ namespace Solid.Arduino.Firmata
 
       bool CheckIfMessageMatches(IFirmataMessage firmataMessage) => (firmataMessage is FirmataMessage<SysEx> sysExMessage) && replyCheck(sysExMessage.Value);
 
-      if (WaitForMessage(CheckIfMessageMatches, _messageTimeout) is FirmataMessage<SysEx> reply)
+      if (WaitForMessage(CheckIfMessageMatches, timeoutMs ?? _messageTimeout) is FirmataMessage<SysEx> reply)
         return reply.Value;
 
       throw new TimeoutException(string.Format(Messages.TimeoutEx_WaitMessage, typeof(SysEx).Name));
@@ -484,6 +488,11 @@ namespace Solid.Arduino.Firmata
 
     public void SendSysEx(SysEx message)
     {
+#if DEBUG_OUTPUT
+      var subCommand = message.Command == 1 ? $"{message.Payload[0]:X2}" : string.Empty;
+      _logger.Debug($"{_stopWatch.ElapsedMilliseconds}: SendSysEx() {message.Command:X2} {subCommand}");
+      Debug.WriteLine($"{_stopWatch.ElapsedMilliseconds}: SendSysEx() {message.Command:X2} {subCommand}");
+#endif
       SendSysEx((SysExCommand)message.Command, message.Payload);
     }
 
@@ -519,7 +528,11 @@ namespace Solid.Arduino.Firmata
       void OnMessageReceived(object sender, FirmataMessageEventArgs args)
       {
         if (!messagePredicate.Invoke(args.Value))
+        {
+          var sysEx = args.Value as FirmataMessage<SysEx>;
+          _logger.Error($"Nope message not the right one: { args.Value.Name } command { sysEx?.Value.Command }.");
           return;
+        }
 
         message = args.Value;
         // ReSharper disable once AccessToDisposedClosure
@@ -577,11 +590,11 @@ namespace Solid.Arduino.Firmata
             return;
           }
 
-#if CONSOLE_OUTPUT && OUTPUT_ALL_BYTES
+#if DEBUG_OUTPUT && OUTPUT_ALL_BYTES
           if (_messageBufferIndex > 0 && _messageBufferIndex % 8 == 0)
-            Console.WriteLine(string.Empty);
+            Debug.WriteLine(string.Empty);
 
-          Console.Write($"{serialByte:x2} ");
+          Debug.Write($"{serialByte:x2} ");
 #endif
 
           if (_processMessageFunction != null)
@@ -601,7 +614,7 @@ namespace Solid.Arduino.Firmata
 
     private void ProcessOutOfMessageData(int serialByte)
     {
-      //Console.WriteLine("Out-of-message byte received.");
+      //Debug.WriteLine("Out-of-message byte received.");
     }
 
     private void StartMessage(byte command, Action<byte> processor)
@@ -658,8 +671,8 @@ namespace Solid.Arduino.Firmata
       // Don't throw an exception here, as we're in the middle of handling an event and
       // have no way of catching an exception, other than a global unhandled exception handler.
       // Just skip these bytes, until sync is found when a new message starts.
-#if CONSOLE_OUTPUT
-      Console.WriteLine($"\r\n\r\n------------------\r\nCommand not supported {serialByte:X2}\r\n\r\n------------------\r\n");
+#if DEBUG_OUTPUT
+      Debug.WriteLine($"r\n------------------\r\nCommand not supported {serialByte:X2}\r\n\r\n------------------\r\n");
 #endif
     }
 
@@ -767,8 +780,10 @@ namespace Solid.Arduino.Firmata
 
     private void DeliverMessage(IFirmataMessage message)
     {
-#if CONSOLE_OUTPUT
-      Console.WriteLine($"{_stopWatch.ElapsedMilliseconds} Received {message.Name}");
+#if DEBUG_OUTPUT
+      var sysExCommand = message is FirmataMessage<SysEx> sysEx ? $"{sysEx.Value.Command:X2} {sysEx.Value.Payload[0]:X2}" : string.Empty;
+      _logger.Debug($"{_stopWatch.ElapsedMilliseconds}: Received {message.Name} {sysExCommand}");
+      Debug.WriteLine($"{_stopWatch.ElapsedMilliseconds}: Received {message.Name} {sysExCommand}");
 #endif
 
       ResetMessage();
