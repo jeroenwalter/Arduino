@@ -118,7 +118,7 @@ namespace Solid.Arduino.Firmata
         }
         catch (TimeoutException)
         {
-          _logger.Info($"Timeout while waiting for Firmata startup on port {Connection.Name}");
+          _logger.Warn($"Timeout while waiting for Firmata startup on port {Connection.Name}");
         }
         
       } while (!success && stopwatch.ElapsedMilliseconds < startupTimeoutMs);
@@ -530,7 +530,7 @@ namespace Solid.Arduino.Firmata
         if (!messagePredicate.Invoke(args.Value))
         {
           var sysEx = args.Value as FirmataMessage<SysEx>;
-          _logger.Error($"Nope message not the right one: { args.Value.Name } command { sysEx?.Value.Command }.");
+          _logger.Debug($"Received message, but it's not the expected one: { args.Value.Name } command { sysEx?.Value.Command }.");
           return;
         }
 

@@ -78,6 +78,18 @@ namespace Solid.Arduino.Serial
                    ?? FindConnection(IsFirmataAvailable, portNames, OtherBaudRates, DefaultTimeoutMs);
         }
 
+        public FirmataSession FindFirmata(SerialBaudRate baudRate)
+        {
+          var portNames = Factory.GetDeviceNames();
+          SerialBaudRate[] baudRates = { baudRate };
+          return FindConnection(IsFirmataAvailable, portNames, baudRates, DefaultTimeoutMs);
+        }
+
+        public FirmataSession FindFirmata(string portName, SerialBaudRate baudRate)
+        {
+          return FindFirmata(portName, baudRate, DefaultTimeoutMs);
+        }
+
         public FirmataSession FindFirmata(string portName, SerialBaudRate baudRate, int timeOut)
         {
             string[] portNames = { portName };
